@@ -288,24 +288,6 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
 
         <form onSubmit={handleSubmit} className="px-5 py-5 space-y-5">
 
-          {/* ── Visual cup editor ── */}
-          <div className="bg-muted/30 rounded-2xl p-4">
-            <CupVisual layers={layers} setLayers={setLayers} temp={form.temperature} />
-          </div>
-
-          {/* ── Name & type ── */}
-          <div>
-            <Label>Preference Name</Label>
-            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Morning Latte" className="mt-1 h-11 rounded-xl" required />
-          </div>
-
-          <div>
-            <Label>Coffee Type</Label>
-            <Input value={form.coffee_type} onChange={e => setForm(f => ({ ...f, coffee_type: e.target.value }))}
-              placeholder="e.g. Latte, Espresso, Flat White" className="mt-1 h-11 rounded-xl" required />
-          </div>
-
           {/* ── Espresso Dose ── */}
           <div>
             <Label className="mb-2 block">Espresso Dose</Label>
@@ -341,6 +323,24 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* ── Visual cup editor ── */}
+          <div className="bg-muted/30 rounded-2xl p-4">
+            <CupVisual layers={layers} setLayers={setLayers} temp={form.temperature} />
+          </div>
+
+          {/* ── Name & type ── */}
+          <div>
+            <Label>Preference Name</Label>
+            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. Morning Latte" className="mt-1 h-11 rounded-xl" required />
+          </div>
+
+          <div>
+            <Label>Coffee Type</Label>
+            <Input value={form.coffee_type} onChange={e => setForm(f => ({ ...f, coffee_type: e.target.value }))}
+              placeholder="e.g. Latte, Espresso, Flat White" className="mt-1 h-11 rounded-xl" required />
           </div>
 
           {/* ── Milk ── */}
