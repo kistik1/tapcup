@@ -190,17 +190,28 @@ function CupVisual({ layers, setLayers, temp, vessel = "mug", size = "large" }) 
         {/* Draggable dividers */}
         {dividers.map(({ key, y, x1, x2 }) => {
           const ld = LAYER_DEF.find(l => l.key === key);
+          const midX = (x1 + x2) / 2;
           return (
             <g key={key}>
-              <line x1={x1 - 4} y1={y} x2={x2 + 4} y2={y}
-                stroke="transparent" strokeWidth={18} style={{ cursor: "ns-resize" }}
+              {/* Large invisible touch/click area */}
+              <line x1={x1 - 10} y1={y} x2={x2 + 10} y2={y}
+                stroke="transparent" strokeWidth={32} style={{ cursor: "ns-resize" }}
                 onMouseDown={e => onDividerDown(e, key)}
                 onTouchStart={e => onDividerDown(e, key)} />
+              {/* Solid divider line */}
               <line x1={x1} y1={y} x2={x2} y2={y}
-                stroke={ld.dark} strokeWidth={2} strokeDasharray="4 3"
+                stroke="white" strokeWidth={2.5} strokeOpacity={0.85}
                 style={{ pointerEvents: "none" }} />
-              <circle cx={x1 - 5} cy={y} r={5} fill={ld.dark} style={{ pointerEvents: "none" }} />
-              <circle cx={x2 + 5} cy={y} r={5} fill={ld.dark} style={{ pointerEvents: "none" }} />
+              {/* Center drag pill */}
+              <rect
+                x={midX - 18} y={y - 9}
+                width={36} height={18} rx={9}
+                fill={ld.dark} style={{ pointerEvents: "none" }} />
+              <text x={midX} y={y + 4.5}
+                textAnchor="middle" fontSize={10} fill="white" fontWeight="700"
+                style={{ pointerEvents: "none", userSelect: "none" }}>
+                ⇅
+              </text>
             </g>
           );
         })}
