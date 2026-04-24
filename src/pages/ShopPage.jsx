@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
+import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
 
 export default function ShopPage() {
   const [manualInput, setManualInput] = useState("");
@@ -35,6 +36,7 @@ export default function ShopPage() {
       setError("");
       const ndef = new window.NDEFReader();
       await ndef.scan();
+      // Overlay is now shown — NFC reader is active
 
       ndef.addEventListener("reading", async ({ serialNumber, message }) => {
         let id = null;
@@ -64,6 +66,11 @@ export default function ShopPage() {
     }
   }
 
+  function cancelNfcScan() {
+    setNfcStatus("idle");
+    setError("");
+  }
+
   async function handleManualSearch() {
     const q = manualInput.trim();
     if (!q) return;
@@ -74,6 +81,11 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <NfcScanOverlay
+        visible={nfcStatus === "scanning"}
+        onCancel={cancelNfcScan}
+        message="Hold the customer's NFC keychain near the top of your device"
+      />
       {/* Header */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">

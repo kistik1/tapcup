@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
 
 export default function ProfileSetup({ user, onCreated }) {
   const [form, setForm] = useState({
@@ -29,7 +30,7 @@ export default function ProfileSetup({ user, onCreated }) {
 
     try {
       setNfcStatus("waiting");
-      setNfcMessage("Hold your NFC keychain near the device...");
+      setNfcMessage("Hold the NFC keychain near the top of your device");
 
       const ndef = new window.NDEFReader();
       await ndef.scan();
@@ -85,6 +86,11 @@ export default function ProfileSetup({ user, onCreated }) {
     }
   }
 
+  function cancelNfcScan() {
+    setNfcStatus("idle");
+    setNfcMessage("");
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.display_name) { setError("Name is required"); return; }
@@ -102,6 +108,11 @@ export default function ProfileSetup({ user, onCreated }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
+      <NfcScanOverlay
+        visible={nfcStatus === "waiting"}
+        onCancel={cancelNfcScan}
+        message="Hold your NFC keychain near the top of your device"
+      />
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
