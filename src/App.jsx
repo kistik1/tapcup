@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+// Add page imports here
 import Home from './pages/Home';
 import ConsumerPage from './pages/ConsumerPage';
 import ShopPage from './pages/ShopPage';
