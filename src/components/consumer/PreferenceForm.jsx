@@ -19,7 +19,7 @@ const LAYER_DEF = [
   { key: "coffee", label: "Coffee", color: "#6b3a1f", dark: "#3d1f08" },
   { key: "foam",   label: "Foam",   color: "#f0ede8", dark: "#9e9086" },
 ];
-const ORDER = ["water", "milk", "coffee", "foam"];
+const ORDER = ["coffee", "water", "milk", "foam"];
 
 const ESPRESSO_DOSES = [
   { value: "1", label: "Single", desc: "1 × 36ml", emoji: "☕", coffeePct: 30 },
@@ -130,7 +130,7 @@ function CupVisual({ layers, setLayers, temp, vessel = "mug", size = "large" }) 
     if (!nextKey) return;
 
     // Coffee amount is locked — skip dividers that would affect it
-    if (key === "coffee" || nextKey === "coffee") return;
+    if (key === "coffee") return;
 
     setLayers(prev => {
       let cumBelow = 0;
