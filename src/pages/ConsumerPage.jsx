@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Star, Edit2, Clock } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Plus, Star, Edit2, Clock, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileSetup from "@/components/consumer/ProfileSetup";
 import PreferenceCard from "@/components/consumer/PreferenceCard";
@@ -76,7 +76,9 @@ export default function ConsumerPage() {
           <p className="font-semibold text-sm">{profile.display_name}</p>
           <p className="text-xs text-muted-foreground font-mono">NFC: {profile.nfc_id}</p>
         </div>
-        <div className="w-6" />
+        <Link to="/settings" className="text-muted-foreground hover:text-foreground transition-colors p-1">
+          <Menu className="w-5 h-5" />
+        </Link>
       </div>
 
       <div className="max-w-lg mx-auto px-4 pb-24">

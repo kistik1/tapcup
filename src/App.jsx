@@ -10,6 +10,7 @@ import Home from './pages/Home';
 import ConsumerPage from './pages/ConsumerPage';
 import ShopPage from './pages/ShopPage';
 import DevPage from './pages/DevPage';
+import SettingsPage from './pages/SettingsPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -37,6 +38,7 @@ const AuthenticatedApp = () => {
       <Route path="/consumer" element={<ConsumerPage />} />
       <Route path="/shop" element={<ShopPage />} />
       <Route path="/dev" element={<DevPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
