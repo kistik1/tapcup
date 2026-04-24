@@ -21,7 +21,11 @@ const LAYER_DEF = [
 ];
 const ORDER = ["water", "milk", "coffee", "foam"];
 
-const STRENGTHS = ["Light", "Regular", "Strong", "Extra Strong"];
+const ESPRESSO_DOSES = [
+  { value: "1", label: "Single", desc: "1 × 36ml", emoji: "☕" },
+  { value: "2", label: "Double", desc: "2 × 36ml", emoji: "☕☕" },
+  { value: "3", label: "Triple", desc: "3 × 36ml", emoji: "☕☕☕" },
+];
 const MILKS     = ["None", "Whole", "Skim", "Oat", "Almond", "Soy", "Coconut"];
 const SUGARS    = ["None", "Half", "1 tsp", "2 tsp", "3 tsp"];
 const TEMPS     = ["Hot", "Warm", "Iced"];
@@ -208,7 +212,7 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
   const [form, setForm] = useState({
     name:        editing?.name        || "",
     coffee_type: editing?.coffee_type || "",
-    strength:    editing?.strength    || "Regular",
+    strength:    editing?.strength    || "1",
     milk:        editing?.milk        || "None",
     sugar:       editing?.sugar       || "None",
     temperature: editing?.temperature || "Hot",
@@ -302,10 +306,24 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
               placeholder="e.g. Latte, Espresso, Flat White" className="mt-1 h-11 rounded-xl" required />
           </div>
 
-          {/* ── Strength ── */}
+          {/* ── Espresso Dose ── */}
           <div>
-            <Label className="mb-2 block">Strength</Label>
-            <Chip value={form.strength} onChange={v => setForm(f => ({ ...f, strength: v }))} options={STRENGTHS} />
+            <Label className="mb-2 block">Espresso Dose</Label>
+            <div className="flex gap-2">
+              {ESPRESSO_DOSES.map(({ value, label, desc, emoji }) => (
+                <button key={value} type="button"
+                  onClick={() => setForm(f => ({ ...f, strength: value }))}
+                  className={`flex-1 flex flex-col items-center py-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    form.strength === value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                  }`}>
+                  <span className="text-lg mb-0.5">{emoji}</span>
+                  <span className="font-semibold">{label}</span>
+                  <span className="text-[11px] font-mono opacity-70">{desc}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* ── Milk ── */}
