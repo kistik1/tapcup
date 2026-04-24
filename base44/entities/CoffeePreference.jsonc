@@ -1,0 +1,79 @@
+{
+  "name": "CoffeePreference",
+  "type": "object",
+  "properties": {
+    "profile_id": {
+      "type": "string",
+      "description": "ID of the CoffeeProfile"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user"
+    },
+    "name": {
+      "type": "string",
+      "description": "Preference label e.g. Morning Latte"
+    },
+    "coffee_type": {
+      "type": "string",
+      "description": "e.g. Latte, Espresso, Cappuccino"
+    },
+    "strength": {
+      "type": "string",
+      "enum": [
+        "Light",
+        "Regular",
+        "Strong",
+        "Extra Strong"
+      ]
+    },
+    "milk": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Whole",
+        "Skim",
+        "Oat",
+        "Almond",
+        "Soy",
+        "Coconut"
+      ]
+    },
+    "sugar": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Half",
+        "1 tsp",
+        "2 tsp",
+        "3 tsp"
+      ]
+    },
+    "temperature": {
+      "type": "string",
+      "enum": [
+        "Hot",
+        "Warm",
+        "Iced"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "description": "Any special instructions"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Selected image URL from gallery"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "profile_id",
+    "user_email",
+    "name",
+    "coffee_type"
+  ]
+}

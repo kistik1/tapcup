@@ -1,0 +1,49 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "profile_id": {
+      "type": "string",
+      "description": "ID of the CoffeeProfile"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "preference_id": {
+      "type": "string",
+      "description": "ID of CoffeePreference used"
+    },
+    "preference_snapshot": {
+      "type": "object",
+      "description": "Snapshot of preference at order time"
+    },
+    "shop_name": {
+      "type": "string",
+      "description": "Name of the coffee shop"
+    },
+    "barista_notes": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Preparing",
+        "Ready",
+        "Completed"
+      ],
+      "default": "Completed"
+    },
+    "ordered_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "profile_id",
+    "user_email"
+  ]
+}

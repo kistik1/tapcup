@@ -1,0 +1,31 @@
+{
+  "name": "CoffeeProfile",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user who owns this profile"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Display name"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Contact phone number"
+    },
+    "nfc_id": {
+      "type": "string",
+      "description": "Unique NFC keychain ID"
+    },
+    "avatar_url": {
+      "type": "string",
+      "description": "Profile photo URL"
+    }
+  },
+  "required": [
+    "user_email",
+    "display_name",
+    "nfc_id"
+  ]
+}
