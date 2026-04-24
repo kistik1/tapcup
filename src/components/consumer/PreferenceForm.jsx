@@ -28,7 +28,7 @@ const ESPRESSO_DOSES = [
 ];
 const MILKS     = ["None", "Whole", "Skim", "Oat", "Almond", "Soy", "Coconut"];
 const SUGARS    = ["None", "Half", "1 tsp", "2 tsp", "3 tsp"];
-const TEMPS     = ["Hot", "Warm", "Iced"];
+const TEMPS     = ["Extra Hot", "Hot", "Warm", "Iced"];
 
 // vessel type: affects shape ratio (top/bottom widths)
 const VESSELS = [
@@ -220,7 +220,7 @@ function CupVisual({ layers, setLayers, temp, vessel = "mug", size = "large" }) 
         })}
 
         {/* Steam */}
-        {temp === "Hot" && [88, 100, 112].map((x, i) => (
+        {(temp === "Hot" || temp === "Extra Hot") && [88, 100, 112].map((x, i) => (
           <motion.path key={i}
             d={`M${x} -2 Q${x + 5} -10 ${x} -20`}
             stroke="#94a3b8" strokeWidth="1.5" fill="none" strokeLinecap="round"

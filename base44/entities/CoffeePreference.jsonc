@@ -52,6 +52,7 @@
     "temperature": {
       "type": "string",
       "enum": [
+        "Extra Hot",
         "Hot",
         "Warm",
         "Iced"
