@@ -123,12 +123,15 @@ function CupVisual({ layers, setLayers, temp, vessel = "mug", size = "large" }) 
     const rect     = svgRef.current.getBoundingClientRect();
     const clientY  = e.touches ? e.touches[0].clientY : e.clientY;
     const svgY     = clientY - rect.top;
-    // Convert svgY back to a percentage within the fill region
     const newCum   = Math.round(((cupH - svgY) / fillH) * 100);
     const key      = dragging.current;
     const idx      = ORDER.indexOf(key);
     const nextKey  = ORDER[idx + 1];
     if (!nextKey) return;
+
+    // Coffee amount is locked — skip dividers that would affect it
+    if (key === "coffee" || nextKey === "coffee") return;
+
     setLayers(prev => {
       let cumBelow = 0;
       for (let i = 0; i <= idx; i++) cumBelow += prev[ORDER[i]];
@@ -273,13 +276,13 @@ function CupVisual({ layers, setLayers, temp, vessel = "mug", size = "large" }) 
                 style={{ background: ld.color, border: `1.5px solid ${ld.dark}` }} />
               <span className="text-[11px] text-muted-foreground w-10 font-medium">{ld.label}</span>
               <div className="flex items-center gap-1 flex-1">
-                <button type="button" onClick={() => adjust(-5)}
-                  className="w-6 h-6 rounded-full border border-border bg-card text-muted-foreground hover:bg-muted text-xs font-bold leading-none flex items-center justify-center">−</button>
+                <button type="button" onClick={() => adjust(-5)} disabled={ld.key === "coffee"}
+                  className="w-6 h-6 rounded-full border border-border bg-card text-muted-foreground hover:bg-muted text-xs font-bold leading-none flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">−</button>
                 <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: ld.dark }} />
                 </div>
-                <button type="button" onClick={() => adjust(5)}
-                  className="w-6 h-6 rounded-full border border-border bg-card text-muted-foreground hover:bg-muted text-xs font-bold leading-none flex items-center justify-center">+</button>
+                <button type="button" onClick={() => adjust(5)} disabled={ld.key === "coffee"}
+                  className="w-6 h-6 rounded-full border border-border bg-card text-muted-foreground hover:bg-muted text-xs font-bold leading-none flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">+</button>
                 <span className="text-[11px] font-mono text-muted-foreground w-7 text-right">{pct}%</span>
               </div>
             </div>
