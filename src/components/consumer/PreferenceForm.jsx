@@ -416,43 +416,6 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
 
         <form onSubmit={handleSubmit} className="px-5 py-5 space-y-5">
 
-          {/* ── Espresso Dose ── */}
-          <div>
-            <Label className="mb-2 block">Espresso Dose</Label>
-            <div className="flex gap-2">
-              {ESPRESSO_DOSES.map(({ value, label, desc, emoji, coffeePct }) => (
-                <button key={value} type="button"
-                  onClick={() => {
-                    setForm(f => ({ ...f, strength: value }));
-                    setLayers(prev => {
-                      const total = prev.water + prev.milk + prev.coffee + prev.foam;
-                      const remaining = total - coffeePct;
-                      const nonCoffeeTotal = prev.water + prev.milk + prev.foam;
-                      if (nonCoffeeTotal === 0) {
-                        return { ...prev, coffee: coffeePct, foam: Math.max(0, total - coffeePct) };
-                      }
-                      const scale = remaining / nonCoffeeTotal;
-                      return {
-                        water:  Math.round(prev.water * scale),
-                        milk:   Math.round(prev.milk  * scale),
-                        coffee: coffeePct,
-                        foam:   Math.round(prev.foam  * scale),
-                      };
-                    });
-                  }}
-                  className={`flex-1 flex flex-col items-center py-3 rounded-xl border-2 transition-all text-sm font-medium ${
-                    form.strength === value
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card text-muted-foreground hover:border-primary/40"
-                  }`}>
-                  <span className="text-lg mb-0.5">{emoji}</span>
-                  <span className="font-semibold">{label}</span>
-                  <span className="text-[11px] font-mono opacity-70">{desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* ── Vessel & Size ── */}
           <div className="flex gap-4">
             <div className="flex-1">
@@ -507,6 +470,43 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* ── Espresso Dose ── */}
+          <div>
+            <Label className="mb-2 block">Espresso Dose</Label>
+            <div className="flex gap-2">
+              {ESPRESSO_DOSES.map(({ value, label, desc, emoji, coffeePct }) => (
+                <button key={value} type="button"
+                  onClick={() => {
+                    setForm(f => ({ ...f, strength: value }));
+                    setLayers(prev => {
+                      const total = prev.water + prev.milk + prev.coffee + prev.foam;
+                      const remaining = total - coffeePct;
+                      const nonCoffeeTotal = prev.water + prev.milk + prev.foam;
+                      if (nonCoffeeTotal === 0) {
+                        return { ...prev, coffee: coffeePct, foam: Math.max(0, total - coffeePct) };
+                      }
+                      const scale = remaining / nonCoffeeTotal;
+                      return {
+                        water:  Math.round(prev.water * scale),
+                        milk:   Math.round(prev.milk  * scale),
+                        coffee: coffeePct,
+                        foam:   Math.round(prev.foam  * scale),
+                      };
+                    });
+                  }}
+                  className={`flex-1 flex flex-col items-center py-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    form.strength === value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                  }`}>
+                  <span className="text-lg mb-0.5">{emoji}</span>
+                  <span className="font-semibold">{label}</span>
+                  <span className="text-[11px] font-mono opacity-70">{desc}</span>
+                </button>
+              ))}
             </div>
           </div>
 
