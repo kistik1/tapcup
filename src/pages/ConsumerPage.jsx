@@ -1,55 +1,63 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Star, Edit2, Clock, Menu } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowLeft, Plus, Star, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ProfileSetup from "@/components/consumer/ProfileSetup";
+import IdentifyScreen from "@/components/consumer/IdentifyScreen";
 import PreferenceCard from "@/components/consumer/PreferenceCard";
 import PreferenceForm from "@/components/consumer/PreferenceForm";
 import OrderHistoryList from "@/components/shared/OrderHistoryList";
 
 export default function ConsumerPage() {
-  const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [preferences, setPreferences] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showPrefForm, setShowPrefForm] = useState(false);
   const [editingPref, setEditingPref] = useState(null);
   const [tab, setTab] = useState("prefs"); // prefs | history
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  async function loadProfileData(p) {
+    setLoading(true);
+    const prefs = await base44.entities.CoffeePreference.filter({ profile_id: p.id });
+    setPreferences(prefs);
+    const ords = await base44.entities.Order.filter({ profile_id: p.id });
+    setOrders(ords.sort((a, b) => new Date(b.ordered_at || b.created_date) - new Date(a.ordered_at || a.created_date)));
+    setLoading(false);
+  }
 
   async function loadData() {
-    setLoading(true);
-    const me = await base44.auth.me();
-    setUser(me);
+    if (!profile) return;
+    await loadProfileData(profile);
+  }
 
-    const profiles = await base44.entities.CoffeeProfile.filter({ user_email: me.email });
-    if (profiles.length > 0) {
-      const p = profiles[0];
-      setProfile(p);
-      const prefs = await base44.entities.CoffeePreference.filter({ profile_id: p.id });
-      setPreferences(prefs);
-      const ords = await base44.entities.Order.filter({ profile_id: p.id });
-      setOrders(ords.sort((a, b) => new Date(b.ordered_at || b.created_date) - new Date(a.ordered_at || a.created_date)));
-    }
-    setLoading(false);
+  function handleIdentified(p) {
+    setProfile(p);
+    loadProfileData(p);
+  }
+
+  function handleSignOut() {
+    setProfile(null);
+    setPreferences([]);
+    setOrders([]);
+    setTab("prefs");
   }
 
   async function setDefault(pref) {
     await Promise.all(preferences.map(p =>
       base44.entities.CoffeePreference.update(p.id, { is_default: p.id === pref.id })
     ));
-    await loadData();
+    await loadProfileData(profile);
   }
 
   async function deletePref(pref) {
     await base44.entities.CoffeePreference.delete(pref.id);
-    await loadData();
+    await loadProfileData(profile);
+  }
+
+  if (!profile) {
+    return <IdentifyScreen onIdentified={handleIdentified} />;
   }
 
   if (loading) return (
@@ -57,10 +65,6 @@ export default function ConsumerPage() {
       <div className="w-8 h-8 border-4 border-amber-200 border-t-amber-800 rounded-full animate-spin" />
     </div>
   );
-
-  if (!profile) {
-    return <ProfileSetup user={user} onCreated={loadData} />;
-  }
 
   const defaultPref = preferences.find(p => p.is_default);
   const otherPrefs = preferences.filter(p => !p.is_default);
@@ -76,9 +80,13 @@ export default function ConsumerPage() {
           <p className="font-semibold text-sm">{profile.display_name}</p>
           <p className="text-xs text-muted-foreground font-mono">NFC: {profile.nfc_id}</p>
         </div>
-        <Link to="/settings" className="text-muted-foreground hover:text-foreground transition-colors p-1">
-          <Menu className="w-5 h-5" />
-        </Link>
+        <button
+          onClick={handleSignOut}
+          className="text-muted-foreground hover:text-destructive transition-colors p-1"
+          title="יציאה"
+        >
+          <LogOut className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="max-w-lg mx-auto px-4 pb-24">
@@ -163,7 +171,7 @@ export default function ConsumerPage() {
           profile={profile}
           editing={editingPref}
           onClose={() => { setShowPrefForm(false); setEditingPref(null); }}
-          onSaved={loadData}
+          onSaved={() => loadProfileData(profile)}
         />
       )}
     </div>
