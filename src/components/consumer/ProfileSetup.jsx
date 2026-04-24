@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Coffee } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Coffee, Wifi, CheckCircle, AlertCircle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,25 +10,90 @@ export default function ProfileSetup({ user, onCreated }) {
   const [form, setForm] = useState({
     display_name: user?.full_name || "",
     phone: "",
-    nfc_id: "",
   });
+  const [nfcId, setNfcId] = useState("");
+  const [nfcStatus, setNfcStatus] = useState("idle"); // idle | waiting | success | error | unsupported
+  const [nfcMessage, setNfcMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  function generateNfcId() {
-    const id = "NFC-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    setForm(f => ({ ...f, nfc_id: id }));
+  async function handleNfcTap() {
+    if (!("NDEFReader" in window)) {
+      // Fallback: generate a virtual NFC ID for unsupported browsers
+      const id = "NFC-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      setNfcId(id);
+      setNfcStatus("success");
+      setNfcMessage("Virtual NFC ID generated (browser doesn't support Web NFC)");
+      return;
+    }
+
+    try {
+      setNfcStatus("waiting");
+      setNfcMessage("Hold your NFC keychain near the device...");
+
+      const ndef = new window.NDEFReader();
+      await ndef.scan();
+
+      // Listen for a tag
+      ndef.addEventListener("reading", async ({ serialNumber, message }) => {
+        // Use serial number as unique ID, or read existing record
+        let id = null;
+
+        // Check if tag already has a TapCup ID written
+        for (const record of message.records) {
+          if (record.recordType === "text") {
+            const decoder = new TextDecoder();
+            const text = decoder.decode(record.data);
+            if (text.startsWith("TAPCUP:")) {
+              id = text.replace("TAPCUP:", "");
+              break;
+            }
+          }
+        }
+
+        // If no existing ID, generate one from serial number
+        if (!id) {
+          const hex = serialNumber
+            ? serialNumber.replace(/:/g, "").substring(0, 6).toUpperCase()
+            : Math.random().toString(36).substring(2, 8).toUpperCase();
+          id = "NFC-" + hex;
+        }
+
+        setNfcId(id);
+        setNfcStatus("success");
+        setNfcMessage("NFC keychain detected!");
+
+        // Write the ID back to the tag
+        try {
+          const writer = new window.NDEFReader();
+          await writer.write({
+            records: [{ recordType: "text", data: `TAPCUP:${id}` }],
+          });
+        } catch {
+          // Write failed silently — ID is still captured
+        }
+      });
+
+      ndef.addEventListener("readingerror", () => {
+        setNfcStatus("error");
+        setNfcMessage("Could not read NFC tag. Try again.");
+      });
+
+    } catch (err) {
+      setNfcStatus("error");
+      setNfcMessage(err.message || "NFC scan failed. Try again.");
+    }
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.display_name || !form.nfc_id) {
-      setError("Name and NFC ID are required");
-      return;
-    }
+    if (!form.display_name) { setError("Name is required"); return; }
+    if (!nfcId) { setError("Please tap your NFC keychain first"); return; }
     setSaving(true);
     await base44.entities.CoffeeProfile.create({
-      ...form,
+      display_name: form.display_name,
+      phone: form.phone,
+      nfc_id: nfcId,
       user_email: user.email,
     });
     await onCreated();
@@ -50,7 +115,7 @@ export default function ProfileSetup({ user, onCreated }) {
           <p className="text-muted-foreground text-sm mt-1">Create your TapCup coffee profile</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <Label>Your Name</Label>
             <Input
@@ -71,28 +136,103 @@ export default function ProfileSetup({ user, onCreated }) {
             />
           </div>
 
+          {/* NFC Tap Section */}
           <div>
-            <Label>NFC ID</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                value={form.nfc_id}
-                onChange={e => setForm(f => ({ ...f, nfc_id: e.target.value }))}
-                placeholder="NFC-XXXXXX"
-                className="h-12 rounded-xl font-mono"
-              />
-              <Button type="button" variant="outline" onClick={generateNfcId} className="h-12 px-4 rounded-xl text-xs">
-                Generate
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">This ID links to your physical NFC keychain</p>
+            <Label className="mb-3 block">NFC Keychain</Label>
+
+            <AnimatePresence mode="wait">
+              {nfcStatus === "idle" && (
+                <motion.button
+                  key="idle"
+                  type="button"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={handleNfcTap}
+                  className="w-full flex flex-col items-center gap-3 py-8 border-2 border-dashed border-border rounded-2xl hover:border-amber-400 hover:bg-amber-50/50 transition-all group"
+                >
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <Wifi className="w-7 h-7 text-amber-700" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-foreground text-sm">Tap your NFC keychain</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">to add it to this profile</p>
+                  </div>
+                </motion.button>
+              )}
+
+              {nfcStatus === "waiting" && (
+                <motion.div
+                  key="waiting"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="w-full flex flex-col items-center gap-3 py-8 border-2 border-amber-400 bg-amber-50 rounded-2xl"
+                >
+                  <div className="relative w-14 h-14 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full border-4 border-amber-300 animate-ping opacity-40" />
+                    <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+                      <Wifi className="w-7 h-7 text-amber-600 animate-pulse" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-amber-700 font-medium">{nfcMessage}</p>
+                </motion.div>
+              )}
+
+              {nfcStatus === "success" && (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="w-full flex flex-col items-center gap-3 py-6 border-2 border-emerald-400 bg-emerald-50 rounded-2xl"
+                >
+                  <CheckCircle className="w-10 h-10 text-emerald-500" />
+                  <div className="text-center">
+                    <p className="font-semibold text-emerald-800 text-sm">Keychain linked!</p>
+                    <p className="font-mono text-xs text-emerald-600 mt-1 bg-emerald-100 px-3 py-1 rounded-full">{nfcId}</p>
+                    {nfcMessage && (
+                      <p className="text-xs text-emerald-600/70 mt-1">{nfcMessage}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setNfcStatus("idle"); setNfcId(""); setNfcMessage(""); }}
+                    className="text-xs text-emerald-600 underline"
+                  >
+                    Tap a different keychain
+                  </button>
+                </motion.div>
+              )}
+
+              {nfcStatus === "error" && (
+                <motion.div
+                  key="error"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="w-full flex flex-col items-center gap-3 py-6 border-2 border-destructive/30 bg-destructive/5 rounded-2xl"
+                >
+                  <AlertCircle className="w-10 h-10 text-destructive" />
+                  <p className="text-sm text-destructive text-center">{nfcMessage}</p>
+                  <button
+                    type="button"
+                    onClick={() => setNfcStatus("idle")}
+                    className="text-xs text-destructive/70 underline"
+                  >
+                    Try again
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {error && <p className="text-destructive text-sm">{error}</p>}
 
           <Button
             type="submit"
-            disabled={saving}
-            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold mt-2"
+            disabled={saving || !nfcId}
+            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold"
           >
             {saving ? "Creating..." : "Create Profile"}
           </Button>
