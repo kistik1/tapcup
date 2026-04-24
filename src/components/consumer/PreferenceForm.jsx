@@ -22,9 +22,9 @@ const LAYER_DEF = [
 const ORDER = ["water", "milk", "coffee", "foam"];
 
 const ESPRESSO_DOSES = [
-  { value: "1", label: "Single", desc: "1 × 36ml", emoji: "☕" },
-  { value: "2", label: "Double", desc: "2 × 36ml", emoji: "☕☕" },
-  { value: "3", label: "Triple", desc: "3 × 36ml", emoji: "☕☕☕" },
+  { value: "1", label: "Single", desc: "1 × 36ml", emoji: "☕", coffeePct: 30 },
+  { value: "2", label: "Double", desc: "2 × 36ml", emoji: "☕☕", coffeePct: 50 },
+  { value: "3", label: "Triple", desc: "3 × 36ml", emoji: "☕☕☕", coffeePct: 70 },
 ];
 const MILKS     = ["None", "Whole", "Skim", "Oat", "Almond", "Soy", "Coconut"];
 const SUGARS    = ["None", "Half", "1 tsp", "2 tsp", "3 tsp"];
@@ -310,9 +310,26 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
           <div>
             <Label className="mb-2 block">Espresso Dose</Label>
             <div className="flex gap-2">
-              {ESPRESSO_DOSES.map(({ value, label, desc, emoji }) => (
+              {ESPRESSO_DOSES.map(({ value, label, desc, emoji, coffeePct }) => (
                 <button key={value} type="button"
-                  onClick={() => setForm(f => ({ ...f, strength: value }))}
+                  onClick={() => {
+                    setForm(f => ({ ...f, strength: value }));
+                    setLayers(prev => {
+                      const total = prev.water + prev.milk + prev.coffee + prev.foam;
+                      const remaining = total - coffeePct;
+                      const nonCoffeeTotal = prev.water + prev.milk + prev.foam;
+                      if (nonCoffeeTotal === 0) {
+                        return { ...prev, coffee: coffeePct, foam: Math.max(0, total - coffeePct) };
+                      }
+                      const scale = remaining / nonCoffeeTotal;
+                      return {
+                        water:  Math.round(prev.water * scale),
+                        milk:   Math.round(prev.milk  * scale),
+                        coffee: coffeePct,
+                        foam:   Math.round(prev.foam  * scale),
+                      };
+                    });
+                  }}
                   className={`flex-1 flex flex-col items-center py-3 rounded-xl border-2 transition-all text-sm font-medium ${
                     form.strength === value
                       ? "border-primary bg-primary/10 text-primary"
