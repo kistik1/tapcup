@@ -289,22 +289,6 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
             <CupVisual layers={layers} setLayers={setLayers} temp={form.temperature} />
           </div>
 
-          {/* ── Image picker ── */}
-          <div>
-            <Label className="mb-2 block">Coffee Image</Label>
-            <button type="button" onClick={() => setShowGallery(true)}
-              className="w-full h-28 rounded-2xl overflow-hidden border-2 border-dashed border-border hover:border-amber-400 transition-colors">
-              {form.image_url ? (
-                <img src={form.image_url} alt="Selected" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
-                  <span className="text-3xl mb-1">📷</span>
-                  <span className="text-xs">Tap to pick image</span>
-                </div>
-              )}
-            </button>
-          </div>
-
           {/* ── Name & type ── */}
           <div>
             <Label>Preference Name</Label>
