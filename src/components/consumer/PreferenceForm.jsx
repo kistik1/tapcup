@@ -240,15 +240,51 @@ function CupVisual({ layers, setLayers, temp, vessel = "mug", size = "large" }) 
         ))}
       </svg>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-1.5 justify-center mt-2">
-        {LAYER_DEF.map(ld => (
-          <span key={ld.key} className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
-              style={{ background: ld.color, border: `1.5px solid ${ld.dark}` }} />
-            {ld.label} <span className="font-mono">{layers[ld.key]}%</span>
-          </span>
-        ))}
+      {/* Layer controls */}
+      <div className="w-full mt-3 space-y-1.5">
+        {LAYER_DEF.map(ld => {
+          const pct = layers[ld.key];
+          function adjust(delta) {
+            setLayers(prev => {
+              const idx = ORDER.indexOf(ld.key);
+              // Find a neighbour to steal from / give to
+              const candidates = ORDER.filter((k, i) => i !== idx);
+              // Prefer taking from the last layer with surplus
+              let donor = null;
+              if (delta > 0) {
+                // We want to increase ld.key → take from the last candidate that has > 0
+                for (let i = candidates.length - 1; i >= 0; i--) {
+                  if (prev[candidates[i]] >= delta) { donor = candidates[i]; break; }
+                }
+              } else {
+                // We want to decrease ld.key → give to the next layer
+                if (prev[ld.key] + delta < 0) return prev;
+                donor = candidates[candidates.length - 1];
+              }
+              if (!donor) return prev;
+              const newVal = Math.max(0, prev[ld.key] + delta);
+              const realDelta = newVal - prev[ld.key];
+              return { ...prev, [ld.key]: newVal, [donor]: Math.max(0, prev[donor] - realDelta) };
+            });
+          }
+          return (
+            <div key={ld.key} className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ background: ld.color, border: `1.5px solid ${ld.dark}` }} />
+              <span className="text-[11px] text-muted-foreground w-10 font-medium">{ld.label}</span>
+              <div className="flex items-center gap-1 flex-1">
+                <button type="button" onClick={() => adjust(-5)}
+                  className="w-6 h-6 rounded-full border border-border bg-card text-muted-foreground hover:bg-muted text-xs font-bold leading-none flex items-center justify-center">−</button>
+                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: ld.dark }} />
+                </div>
+                <button type="button" onClick={() => adjust(5)}
+                  className="w-6 h-6 rounded-full border border-border bg-card text-muted-foreground hover:bg-muted text-xs font-bold leading-none flex items-center justify-center">+</button>
+                <span className="text-[11px] font-mono text-muted-foreground w-7 text-right">{pct}%</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
