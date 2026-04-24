@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Wifi, Search, KeyRound, Phone } from "lucide-react";
+import { ArrowLeft, Wifi, Search, KeyRound, Phone, Settings } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
 import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
+import CupSizeManager from "@/components/shop/CupSizeManager";
 
 export default function ShopPage() {
   const [manualInput, setManualInput] = useState("");
@@ -16,6 +17,12 @@ export default function ShopPage() {
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState("");
   const [nfcStatus, setNfcStatus] = useState("idle"); // idle | scanning | error
+  const [showSettings, setShowSettings] = useState(false);
+  const [shopId, setShopId] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(u => { if (u) setShopId(u.email); }).catch(() => {});
+  }, []);
 
   async function lookupByNfcId(nfcId) {
     setError("");
@@ -112,11 +119,34 @@ export default function ShopPage() {
         <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
           <Wifi className="w-5 h-5 text-primary" />
           <span className="font-semibold">Coffee Shop</span>
         </div>
+        <button
+          onClick={() => setShowSettings(s => !s)}
+          className={`p-2 rounded-xl transition-colors ${showSettings ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+          title="Cup Size Settings"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
       </div>
+
+      {/* Cup Size Settings Panel */}
+      <AnimatePresence>
+        {showSettings && shopId && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden border-b border-border bg-muted/20"
+          >
+            <div className="max-w-lg mx-auto px-4 py-5">
+              <CupSizeManager shopId={shopId} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {!customer ? (

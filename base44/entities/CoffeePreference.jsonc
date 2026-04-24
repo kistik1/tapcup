@@ -57,6 +57,14 @@
         "Iced"
       ]
     },
+    "cup_size_name": {
+      "type": "string",
+      "description": "Selected cup size name (e.g. Medium)"
+    },
+    "cup_size_ml": {
+      "type": "number",
+      "description": "Selected cup size in ml"
+    },
     "notes": {
       "type": "string",
       "description": "Any special instructions"
