@@ -14,10 +14,10 @@ const CUP_BOT_W = 86;
 const CX = 100;
 
 const LAYER_DEF = [
-  { key: "coffee", label: "Coffee", color: "#6b3a1f", dark: "#3d1f08" },
-  { key: "water",  label: "Water",  color: "#a8d5f5", dark: "#4a90c4" },
-  { key: "milk",   label: "Milk",   color: "#f5e6c8", dark: "#c49a3a" },
   { key: "foam",   label: "Foam",   color: "#f0ede8", dark: "#9e9086" },
+  { key: "milk",   label: "Milk",   color: "#f5e6c8", dark: "#c49a3a" },
+  { key: "water",  label: "Water",  color: "#a8d5f5", dark: "#4a90c4" },
+  { key: "coffee", label: "Coffee", color: "#6b3a1f", dark: "#3d1f08" },
 ];
 const ORDER = ["coffee", "water", "milk", "foam"];
 
