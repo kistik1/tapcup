@@ -31,10 +31,32 @@ const SUGARS    = ["None", "Half", "1 tsp", "2 tsp", "3 tsp"];
 const TEMPS     = ["Extra Hot", "Hot", "Warm", "Iced"];
 
 // vessel type: affects shape ratio (top/bottom widths)
+const MUG_SVG = (
+  <svg viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 14h18v16a2 2 0 01-2 2H10a2 2 0 01-2-2V14z"/>
+    <path d="M26 17h4a3 3 0 010 6h-4"/>
+    <path d="M13 8 Q14 5 15 8"/>
+    <path d="M17 8 Q18 5 19 8"/>
+  </svg>
+);
+const GLASS_SVG = (
+  <svg viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 6h20l-3 28H13L10 6z"/>
+    <path d="M10 6 Q15 12 20 10 Q25 8 30 6"/>
+  </svg>
+);
+const TA_SVG = (
+  <svg viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 10h18l-2 24H13L11 10z"/>
+    <rect x="9" y="7" width="22" height="4" rx="2"/>
+    <circle cx="20" cy="23" r="4"/>
+  </svg>
+);
+
 const VESSELS = [
-  { value: "mug",   label: "Mug",    emoji: "🫖", topW: 130, botW: 110 }, // nearly straight
-  { value: "glass", label: "Glass",  emoji: "🥛", topW: 120, botW: 100 }, // slight taper
-  { value: "ta",    label: "TA",     emoji: "📄", topW: 100, botW: 80  }, // paper cup taper
+  { value: "mug",   label: "Mug",    svg: MUG_SVG,   topW: 130, botW: 110 },
+  { value: "glass", label: "Glass",  svg: GLASS_SVG, topW: 120, botW: 100 },
+  { value: "ta",    label: "TA",     svg: TA_SVG,    topW: 100, botW: 80  },
 ];
 
 // size: totalMl = total cup volume, cupH = visual SVG height of the cup
@@ -420,7 +442,7 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
             <div className="flex-1">
               <Label className="mb-2 block">Cup Type</Label>
               <div className="flex gap-2">
-                {VESSELS.map(({ value, label, emoji }) => (
+                {VESSELS.map(({ value, label, svg }) => (
                   <button key={value} type="button"
                     onClick={() => setForm(f => ({ ...f, vessel: value }))}
                     className={`flex-1 flex flex-col items-center py-2.5 rounded-xl border-2 transition-all text-xs font-medium ${
@@ -428,7 +450,7 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border bg-card text-muted-foreground hover:border-primary/40"
                     }`}>
-                    <span className="text-xl mb-0.5">{emoji}</span>
+                    <span className="mb-0.5">{svg}</span>
                     <span>{label}</span>
                   </button>
                 ))}
