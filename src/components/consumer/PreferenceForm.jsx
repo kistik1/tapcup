@@ -210,29 +210,19 @@ function CupVisual({ layers, setLayers, temp }) {
 // ── Main PreferenceForm ───────────────────────────────────────────────
 export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
   const [form, setForm] = useState({
-    name:          editing?.name          || "",
-    coffee_type:   editing?.coffee_type   || "",
-    strength:      editing?.strength      || "1",
-    milk:          editing?.milk          || "None",
-    sugar:         editing?.sugar         || "None",
-    temperature:   editing?.temperature   || "Hot",
-    cup_size_name: editing?.cup_size_name || "",
-    cup_size_ml:   editing?.cup_size_ml   || null,
-    notes:         editing?.notes         || "",
-    image_url:     editing?.image_url     || "",
-    is_default:    editing?.is_default    || false,
+    name:        editing?.name        || "",
+    coffee_type: editing?.coffee_type || "",
+    strength:    editing?.strength    || "1",
+    milk:        editing?.milk        || "None",
+    sugar:       editing?.sugar       || "None",
+    temperature: editing?.temperature || "Hot",
+    notes:       editing?.notes       || "",
+    image_url:   editing?.image_url   || "",
+    is_default:  editing?.is_default  || false,
   });
   const [layers, setLayers]     = useState(defaultLayers(editing));
   const [saving, setSaving]     = useState(false);
   const [showGallery, setShowGallery] = useState(false);
-  const [cupSizes, setCupSizes] = useState([]);
-
-  // Load available cup sizes from all shops
-  useEffect(() => {
-    base44.entities.CupSize.list().then(sizes => {
-      setCupSizes(sizes.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
-    });
-  }, []);
 
   // Keep milk layer in sync with milk form field
   useEffect(() => {
@@ -244,8 +234,6 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
     setSaving(true);
     const data = {
       ...form,
-      cup_size_name: form.cup_size_name || null,
-      cup_size_ml:   form.cup_size_ml   || null,
       milk: layers.milk > 0 ? (form.milk === "None" ? "Whole" : form.milk) : "None",
       profile_id: profile.id,
       user_email: profile.user_email,
@@ -381,31 +369,6 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
             <Label className="mb-2 block">Temperature</Label>
             <Chip value={form.temperature} onChange={v => setForm(f => ({ ...f, temperature: v }))} options={TEMPS} />
           </div>
-
-          {/* ── Cup Size ── */}
-          {cupSizes.length > 0 && (
-            <div>
-              <Label className="mb-2 block">Cup Size</Label>
-              <div className="flex flex-wrap gap-2">
-                {cupSizes.map(size => (
-                  <button key={size.id} type="button"
-                    onClick={() => setForm(f => ({
-                      ...f,
-                      cup_size_name: f.cup_size_name === size.name ? "" : size.name,
-                      cup_size_ml:   f.cup_size_name === size.name ? null : size.ml,
-                    }))}
-                    className={`flex flex-col items-center px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-medium ${
-                      form.cup_size_name === size.name
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card text-muted-foreground hover:border-primary/40"
-                    }`}>
-                    <span className="font-semibold">{size.name}</span>
-                    <span className="text-[11px] font-mono opacity-70">{size.ml} ml</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* ── Notes ── */}
           <div>
