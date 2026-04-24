@@ -264,7 +264,7 @@ function CreateProfilePrompt({ prefillPhone, onCreated, onClose }) {
             <input
               value={phone}
               onChange={e => setPhone(e.target.value)}
-              placeholder="+972 50 000 0000"
+              placeholder="+1 555 000 0000"
               className="mt-1 w-full h-11 px-3 rounded-xl border border-input bg-transparent text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
