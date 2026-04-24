@@ -427,7 +427,6 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
                         : "border-border bg-card text-muted-foreground hover:border-primary/40"
                     }`}>
                     <span>{label}</span>
-                    <span className="font-mono opacity-60">{totalMl}ml</span>
                   </button>
                 ))}
               </div>
