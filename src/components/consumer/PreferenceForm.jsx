@@ -30,6 +30,19 @@ const MILKS     = ["None", "Whole", "Skim", "Oat", "Almond", "Soy", "Coconut"];
 const SUGARS    = ["None", "Half", "1 tsp", "2 tsp", "3 tsp"];
 const TEMPS     = ["Hot", "Warm", "Iced"];
 
+// vessel type: affects shape ratio (top/bottom widths)
+const VESSELS = [
+  { value: "mug",   label: "Mug",    emoji: "🫖", topW: 130, botW: 110 }, // nearly straight
+  { value: "glass", label: "Glass",  emoji: "🥛", topW: 120, botW: 100 }, // slight taper
+  { value: "ta",    label: "TA",     emoji: "📄", topW: 100, botW: 80  }, // paper cup taper
+];
+
+// size affects the total volume (visual fill %)
+const SIZES = [
+  { value: "small", label: "Small", fillPct: 75 },
+  { value: "large", label: "Large", fillPct: 100 },
+];
+
 function pctToY(pct) { return CUP_H - (pct / 100) * CUP_H; }
 function yToPct(y)   { return ((CUP_H - Math.max(0, Math.min(CUP_H, y))) / CUP_H) * 100; }
 
@@ -57,9 +70,30 @@ function defaultLayers(editing) {
 }
 
 // ── CupVisual sub-component ───────────────────────────────────────────
-function CupVisual({ layers, setLayers, temp }) {
+function CupVisual({ layers, setLayers, temp, vessel = "mug", size = "large" }) {
   const svgRef  = useRef(null);
   const dragging = useRef(null);
+
+  const vesselDef = VESSELS.find(v => v.value === vessel) || VESSELS[0];
+  const sizeDef   = SIZES.find(s => s.value === size) || SIZES[1];
+  const TOP_W = vesselDef.topW;
+  const BOT_W = vesselDef.botW;
+  const fillH = (sizeDef.fillPct / 100) * CUP_H;  // actual liquid height in px
+
+  function xAtYDynamic(y) {
+    const t = 1 - y / CUP_H;
+    return BOT_W / 2 + (TOP_W / 2 - BOT_W / 2) * t;
+  }
+
+  function layerPointsDynamic(startPct, pct) {
+    if (pct <= 0) return null;
+    // Map percentages into the fill region only
+    const yB = CUP_H - (startPct / 100) * fillH;
+    const yT = CUP_H - ((startPct + pct) / 100) * fillH;
+    const xBhalf = xAtYDynamic(yB);
+    const xThalf = xAtYDynamic(yT);
+    return `${CX - xBhalf},${yB} ${CX + xBhalf},${yB} ${CX + xThalf},${yT} ${CX - xThalf},${yT}`;
+  }
 
   const stacked = (() => {
     let cum = 0;
@@ -73,8 +107,8 @@ function CupVisual({ layers, setLayers, temp }) {
   const dividers = stacked.slice(0, -1).map(({ key, startPct, pct }) => {
     const cum = startPct + pct;
     if (cum <= 0 || cum >= 100) return null;
-    const y   = pctToY(cum);
-    const xH  = xAtY(y);
+    const y   = CUP_H - (cum / 100) * fillH;
+    const xH  = xAtYDynamic(y);
     return { key, y, x1: CX - xH, x2: CX + xH, cumPct: cum };
   }).filter(Boolean);
 
@@ -88,7 +122,8 @@ function CupVisual({ layers, setLayers, temp }) {
     const rect     = svgRef.current.getBoundingClientRect();
     const clientY  = e.touches ? e.touches[0].clientY : e.clientY;
     const svgY     = clientY - rect.top;
-    const newCum   = Math.round(yToPct(svgY));
+    // Convert svgY back to a percentage within the fill region
+    const newCum   = Math.round(((CUP_H - svgY) / fillH) * 100);
     const key      = dragging.current;
     const idx      = ORDER.indexOf(key);
     const nextKey  = ORDER[idx + 1];
@@ -102,7 +137,7 @@ function CupVisual({ layers, setLayers, temp }) {
       if (newCurrent + newNext > prev[key] + prev[nextKey] + 0.5) return prev;
       return { ...prev, [key]: Math.round(newCurrent), [nextKey]: Math.round(newNext) };
     });
-  }, [setLayers]);
+  }, [setLayers, fillH]);
 
   const onUp = useCallback(() => { dragging.current = null; }, []);
 
@@ -119,7 +154,7 @@ function CupVisual({ layers, setLayers, temp }) {
     };
   }, [onMove, onUp]);
 
-  const cupPoly = `${CX - CUP_TOP_W/2},0 ${CX + CUP_TOP_W/2},0 ${CX + CUP_BOT_W/2},${CUP_H} ${CX - CUP_BOT_W/2},${CUP_H}`;
+  const cupPoly = `${CX - TOP_W/2},0 ${CX + TOP_W/2},0 ${CX + BOT_W/2},${CUP_H} ${CX - BOT_W/2},${CUP_H}`;
 
   return (
     <div className="flex flex-col items-center">
@@ -137,13 +172,13 @@ function CupVisual({ layers, setLayers, temp }) {
         <g clipPath="url(#cup-clip)">
           {stacked.map(({ key, pct, startPct }) => {
             const ld    = LAYER_DEF.find(l => l.key === key);
-            const pts   = layerPoints(startPct, pct);
+            const pts   = layerPointsDynamic(startPct, pct);
             if (!pts) return null;
             return <polygon key={key} points={pts} fill={ld.color} />;
           })}
           {/* Shine */}
           <polygon
-            points={`${CX - CUP_TOP_W/2 + 5},0 ${CX - CUP_TOP_W/2 + 22},0 ${CX - CUP_BOT_W/2 + 14},${CUP_H} ${CX - CUP_BOT_W/2 + 5},${CUP_H}`}
+            points={`${CX - TOP_W/2 + 5},0 ${CX - TOP_W/2 + 22},0 ${CX - BOT_W/2 + 14},${CUP_H} ${CX - BOT_W/2 + 5},${CUP_H}`}
             fill="white" opacity="0.08" style={{ pointerEvents: "none" }}
           />
         </g>
@@ -173,9 +208,9 @@ function CupVisual({ layers, setLayers, temp }) {
         {stacked.map(({ key, pct, startPct }) => {
           if (pct < 9) return null;
           const ld  = LAYER_DEF.find(l => l.key === key);
-          const mid = startPct + pct / 2;
+          const midY = CUP_H - ((startPct + pct / 2) / 100) * fillH;
           return (
-            <text key={key} x={CX} y={pctToY(mid) + 4}
+            <text key={key} x={CX} y={midY + 4}
               textAnchor="middle" fontSize={10} fontWeight="600" fill={ld.dark}
               style={{ pointerEvents: "none", userSelect: "none" }}>
               {ld.label} {pct}%
@@ -219,6 +254,8 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
     notes:       editing?.notes       || "",
     image_url:   editing?.image_url   || "",
     is_default:  editing?.is_default  || false,
+    vessel:      editing?.vessel      || "mug",
+    size:        editing?.size        || "large",
   });
   const [layers, setLayers]     = useState(defaultLayers(editing));
   const [saving, setSaving]     = useState(false);
@@ -241,6 +278,8 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
       milk_pct:   layers.milk,
       coffee_pct: layers.coffee,
       foam_pct:   layers.foam,
+      vessel:     form.vessel,
+      size:       form.size,
     };
     if (editing) {
       await base44.entities.CoffeePreference.update(editing.id, data);
@@ -325,9 +364,46 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
             </div>
           </div>
 
+          {/* ── Vessel & Size ── */}
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Label className="mb-2 block">Cup Type</Label>
+              <div className="flex gap-2">
+                {VESSELS.map(({ value, label, emoji }) => (
+                  <button key={value} type="button"
+                    onClick={() => setForm(f => ({ ...f, vessel: value }))}
+                    className={`flex-1 flex flex-col items-center py-2.5 rounded-xl border-2 transition-all text-xs font-medium ${
+                      form.vessel === value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                    }`}>
+                    <span className="text-xl mb-0.5">{emoji}</span>
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="mb-2 block">Size</Label>
+              <div className="flex gap-2">
+                {SIZES.map(({ value, label }) => (
+                  <button key={value} type="button"
+                    onClick={() => setForm(f => ({ ...f, size: value }))}
+                    className={`px-4 py-2.5 rounded-xl border-2 transition-all text-xs font-medium ${
+                      form.size === value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* ── Visual cup editor ── */}
           <div className="bg-muted/30 rounded-2xl p-4">
-            <CupVisual layers={layers} setLayers={setLayers} temp={form.temperature} />
+            <CupVisual layers={layers} setLayers={setLayers} temp={form.temperature} vessel={form.vessel} size={form.size} />
           </div>
 
           {/* ── Name & type ── */}
