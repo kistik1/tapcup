@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Coffee, Wifi, Terminal } from "lucide-react";
+import { Coffee, Wifi } from "lucide-react";
 
 export default function Home() {
   const [hovered, setHovered] = useState(null);
@@ -28,17 +28,6 @@ export default function Home() {
       textColor: "text-stone-50",
       bg: "bg-stone-900/10 hover:bg-stone-900/20",
       border: "border-stone-300 hover:border-stone-500",
-    },
-    {
-      id: "dev",
-      icon: Terminal,
-      label: "Developer Mode",
-      sub: "Simulate NFC & test all flows",
-      href: "/dev",
-      color: "from-emerald-800 to-emerald-600",
-      textColor: "text-emerald-50",
-      bg: "bg-emerald-900/10 hover:bg-emerald-900/20",
-      border: "border-emerald-200 hover:border-emerald-400",
     },
   ];
 
