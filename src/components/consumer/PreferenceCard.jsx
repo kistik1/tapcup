@@ -1,7 +1,10 @@
 import { Star, Edit2, Trash2, Check } from "lucide-react";
 import { motion } from "framer-motion";
 
+const VESSEL_EMOJI = { mug: "🫖", glass: "🥛", ta: "📄" };
+
 export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, onDelete, large }) {
+  const vesselEmoji = VESSEL_EMOJI[pref.vessel] || "☕";
   const details = [
     pref.strength && `${pref.strength}`,
     pref.milk && pref.milk !== "None" && `${pref.milk} milk`,
@@ -22,7 +25,7 @@ export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, 
             <img src={pref.image_url} alt={pref.coffee_type} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-amber-900 to-amber-600 flex items-center justify-center">
-              <span className="text-6xl">☕</span>
+              <span className="text-6xl">{vesselEmoji}</span>
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -77,7 +80,7 @@ export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, 
           <img src={pref.image_url} alt={pref.coffee_type} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-amber-800 to-amber-500 flex items-center justify-center">
-            <span className="text-2xl">☕</span>
+            <span className="text-2xl">{vesselEmoji}</span>
           </div>
         )}
       </div>
