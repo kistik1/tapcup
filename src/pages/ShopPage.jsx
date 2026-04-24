@@ -1,31 +1,75 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Search, Wifi } from "lucide-react";
+import { ArrowLeft, Wifi, Search, KeyRound } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
 
 export default function ShopPage() {
-  const [nfcInput, setNfcInput] = useState("");
-  const [searching, setSearching] = useState(false);
+  const [manualInput, setManualInput] = useState("");
+  const [scanning, setScanning] = useState(false);
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState("");
+  const [nfcStatus, setNfcStatus] = useState("idle"); // idle | scanning | error
 
-  async function searchCustomer(id) {
-    const query = id || nfcInput.trim();
-    if (!query) return;
-    setSearching(true);
+  async function lookupCustomer(nfcId) {
     setError("");
     setCustomer(null);
-    const results = await base44.entities.CoffeeProfile.filter({ nfc_id: query });
+    const results = await base44.entities.CoffeeProfile.filter({ nfc_id: nfcId });
     if (results.length === 0) {
       setError("No customer found with that NFC ID");
     } else {
       setCustomer(results[0]);
     }
-    setSearching(false);
+  }
+
+  async function startNfcScan() {
+    if (!("NDEFReader" in window)) {
+      setError("Web NFC is not supported on this device/browser. Use manual entry.");
+      return;
+    }
+    try {
+      setNfcStatus("scanning");
+      setError("");
+      const ndef = new window.NDEFReader();
+      await ndef.scan();
+
+      ndef.addEventListener("reading", async ({ serialNumber, message }) => {
+        let id = null;
+        for (const record of message.records) {
+          if (record.recordType === "text") {
+            const text = new TextDecoder().decode(record.data);
+            if (text.startsWith("TAPCUP:")) { id = text.replace("TAPCUP:", ""); break; }
+          }
+        }
+        if (!id && serialNumber) {
+          id = "NFC-" + serialNumber.replace(/:/g, "").substring(0, 6).toUpperCase();
+        }
+        if (id) {
+          setNfcStatus("idle");
+          await lookupCustomer(id);
+        }
+      });
+
+      ndef.addEventListener("readingerror", () => {
+        setNfcStatus("error");
+        setError("Could not read NFC tag. Try again.");
+      });
+
+    } catch (err) {
+      setNfcStatus("idle");
+      setError(err.message || "NFC scan failed.");
+    }
+  }
+
+  async function handleManualSearch() {
+    const q = manualInput.trim();
+    if (!q) return;
+    setScanning(true);
+    await lookupCustomer(q);
+    setScanning(false);
   }
 
   return (
@@ -41,72 +85,105 @@ export default function ShopPage() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 pt-8 pb-24">
-        <AnimatePresence mode="wait">
-          {!customer ? (
-            <motion.div
-              key="search"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <div className="text-center mb-10">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-800 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-xl">
-                  <Wifi className="w-9 h-9 text-white" />
+      <AnimatePresence mode="wait">
+        {!customer ? (
+          <motion.div
+            key="scan"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="flex flex-col md:flex-row min-h-[calc(100vh-56px)]"
+          >
+            {/* Main: NFC Scan */}
+            <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+              <motion.button
+                onClick={startNfcScan}
+                disabled={nfcStatus === "scanning"}
+                whileTap={{ scale: 0.97 }}
+                className={`relative flex flex-col items-center justify-center gap-6 w-64 h-64 rounded-full border-4 transition-all shadow-xl cursor-pointer select-none
+                  ${nfcStatus === "scanning"
+                    ? "border-amber-400 bg-amber-50"
+                    : "border-border bg-card hover:border-amber-400 hover:bg-amber-50/40"
+                  }`}
+              >
+                {nfcStatus === "scanning" && (
+                  <>
+                    <div className="absolute inset-0 rounded-full border-4 border-amber-400 animate-ping opacity-20" />
+                    <div className="absolute inset-4 rounded-full border-2 border-amber-300 animate-ping opacity-15" />
+                  </>
+                )}
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-colors
+                  ${nfcStatus === "scanning" ? "bg-amber-100" : "bg-muted"}`}>
+                  <Wifi className={`w-12 h-12 transition-colors ${nfcStatus === "scanning" ? "text-amber-600 animate-pulse" : "text-muted-foreground"}`} />
                 </div>
-                <h2 className="font-playfair text-2xl font-bold mb-1">Scan Customer</h2>
-                <p className="text-muted-foreground text-sm">Enter or scan the NFC ID</p>
-              </div>
-
-              <div className="flex gap-2">
-                <Input
-                  value={nfcInput}
-                  onChange={e => setNfcInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && searchCustomer()}
-                  placeholder="NFC ID (e.g. NFC-ABC123)"
-                  className="h-12 rounded-xl text-base font-mono"
-                />
-                <Button
-                  onClick={() => searchCustomer()}
-                  disabled={searching}
-                  className="h-12 px-5 rounded-xl bg-primary text-primary-foreground"
-                >
-                  {searching ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Search className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
+                <div className="text-center px-4">
+                  <p className="font-bold text-lg leading-tight">
+                    {nfcStatus === "scanning" ? "Scanning..." : "Tap to Scan"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {nfcStatus === "scanning" ? "Hold NFC keychain near device" : "Hold customer's NFC keychain"}
+                  </p>
+                </div>
+              </motion.button>
 
               {error && (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-destructive text-sm mt-3 text-center"
+                  className="text-destructive text-sm mt-6 text-center max-w-xs"
                 >
                   {error}
                 </motion.p>
               )}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="profile"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+            </div>
+
+            {/* Sidebar: Manual Entry */}
+            <div className="md:w-72 border-t md:border-t-0 md:border-l border-border bg-muted/30 p-6 flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-4">
+                <KeyRound className="w-4 h-4 text-muted-foreground" />
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Manual Entry</p>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Enter the NFC ID manually if scanning isn't available.</p>
+              <div className="flex flex-col gap-2">
+                <Input
+                  value={manualInput}
+                  onChange={e => setManualInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleManualSearch()}
+                  placeholder="NFC-ABC123"
+                  className="h-11 rounded-xl font-mono text-sm"
+                />
+                <Button
+                  onClick={handleManualSearch}
+                  disabled={scanning || !manualInput.trim()}
+                  className="h-11 rounded-xl bg-primary text-primary-foreground"
+                >
+                  {scanning ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <><Search className="w-4 h-4 mr-1" /> Search</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="max-w-lg mx-auto px-4 pt-8 pb-24"
+          >
+            <button
+              onClick={() => { setCustomer(null); setManualInput(""); setError(""); setNfcStatus("idle"); }}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-6 transition-colors"
             >
-              <button
-                onClick={() => { setCustomer(null); setNfcInput(""); }}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-6 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> Search again
-              </button>
-              <CustomerProfileView profile={customer} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              <ArrowLeft className="w-4 h-4" /> Scan again
+            </button>
+            <CustomerProfileView profile={customer} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
