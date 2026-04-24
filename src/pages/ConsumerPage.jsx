@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import IdentifyScreen from "@/components/consumer/IdentifyScreen";
 import PreferenceCard from "@/components/consumer/PreferenceCard";
 import PreferenceForm from "@/components/consumer/PreferenceForm";
+import CoffeeCupEditor from "@/components/consumer/CoffeeCupEditor";
 import OrderHistoryList from "@/components/shared/OrderHistoryList";
 
 export default function ConsumerPage() {
@@ -15,6 +16,7 @@ export default function ConsumerPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showPrefForm, setShowPrefForm] = useState(false);
+  const [showCupEditor, setShowCupEditor] = useState(false);
   const [editingPref, setEditingPref] = useState(null);
   const [tab, setTab] = useState("prefs"); // prefs | history
 
@@ -151,12 +153,21 @@ export default function ConsumerPage() {
               </div>
             )}
 
-            <Button
-              onClick={() => { setEditingPref(null); setShowPrefForm(true); }}
-              className="w-full mt-6 bg-primary text-primary-foreground rounded-xl h-12 font-semibold"
-            >
-              <Plus className="w-4 h-4 mr-2" /> Add Coffee Preference
-            </Button>
+            <div className="flex gap-2 mt-6">
+              <Button
+                onClick={() => { setEditingPref(null); setShowPrefForm(true); }}
+                variant="outline"
+                className="flex-1 rounded-xl h-12 font-semibold"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Form
+              </Button>
+              <Button
+                onClick={() => { setEditingPref(null); setShowCupEditor(true); }}
+                className="flex-1 rounded-xl h-12 font-semibold bg-primary text-primary-foreground"
+              >
+                ☕ Visual Editor
+              </Button>
+            </div>
           </div>
         )}
 
@@ -172,6 +183,28 @@ export default function ConsumerPage() {
           editing={editingPref}
           onClose={() => { setShowPrefForm(false); setEditingPref(null); }}
           onSaved={() => loadProfileData(profile)}
+        />
+      )}
+
+      {showCupEditor && (
+        <CoffeeCupEditor
+          initial={editingPref || {}}
+          onClose={() => { setShowCupEditor(false); setEditingPref(null); }}
+          onSave={async (data) => {
+            const payload = {
+              ...data,
+              profile_id: profile.id,
+              user_email: profile.user_email,
+            };
+            if (editingPref) {
+              await base44.entities.CoffeePreference.update(editingPref.id, payload);
+            } else {
+              await base44.entities.CoffeePreference.create(payload);
+            }
+            setShowCupEditor(false);
+            setEditingPref(null);
+            await loadProfileData(profile);
+          }}
         />
       )}
     </div>
