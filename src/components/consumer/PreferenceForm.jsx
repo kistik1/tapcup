@@ -32,31 +32,47 @@ const TEMPS     = ["Extra Hot", "Hot", "Warm", "Iced"];
 
 // vessel type: affects shape ratio (top/bottom widths)
 const MUG_SVG = (
-  <svg viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 14h18v16a2 2 0 01-2 2H10a2 2 0 01-2-2V14z"/>
-    <path d="M26 17h4a3 3 0 010 6h-4"/>
-    <path d="M13 8 Q14 5 15 8"/>
-    <path d="M17 8 Q18 5 19 8"/>
+  <svg viewBox="0 0 56 56" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    {/* Steam lines */}
+    <path d="M17 12 Q19 8 17 4"/>
+    <path d="M23 12 Q25 8 23 4"/>
+    {/* Mug body */}
+    <rect x="8" y="14" width="28" height="26" rx="3"/>
+    {/* Handle */}
+    <path d="M36 20 Q46 20 46 27 Q46 34 36 34"/>
+    {/* Bottom base */}
+    <line x1="8" y1="40" x2="36" y2="40"/>
   </svg>
 );
 const GLASS_SVG = (
-  <svg viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 6h20l-3 28H13L10 6z"/>
-    <path d="M10 6 Q15 12 20 10 Q25 8 30 6"/>
+  <svg viewBox="0 0 56 56" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    {/* Glass body - slight inward curve at middle */}
+    <path d="M10 6 L46 6 L40 50 L16 50 Z"/>
+    {/* Vertical ribs */}
+    <line x1="20" y1="10" x2="18" y2="46"/>
+    <line x1="28" y1="10" x2="28" y2="46"/>
+    <line x1="36" y1="10" x2="38" y2="46"/>
+    {/* Water line wave */}
+    <path d="M14 22 Q19 18 24 22 Q29 26 34 22 Q39 18 43 22"/>
   </svg>
 );
 const TA_SVG = (
-  <svg viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 10h18l-2 24H13L11 10z"/>
-    <rect x="9" y="7" width="22" height="4" rx="2"/>
-    <circle cx="20" cy="23" r="4"/>
+  <svg viewBox="0 0 56 56" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    {/* Lid */}
+    <rect x="10" y="8" width="36" height="7" rx="3.5"/>
+    {/* Lid top bump */}
+    <path d="M20 8 Q28 4 36 8"/>
+    {/* Cup body */}
+    <path d="M13 15 L15 50 L41 50 L43 15 Z"/>
+    {/* Circle logo */}
+    <circle cx="28" cy="32" r="6"/>
   </svg>
 );
 
 const VESSELS = [
-  { value: "mug",   label: "Mug",    svg: MUG_SVG,   topW: 130, botW: 110 },
-  { value: "glass", label: "Glass",  svg: GLASS_SVG, topW: 120, botW: 100 },
-  { value: "ta",    label: "TA",     svg: TA_SVG,    topW: 100, botW: 80  },
+  { value: "mug",   label: "Mug",    svg: MUG_SVG,   topW: 140, botW: 130 }, // nearly cylindrical
+  { value: "glass", label: "Glass",  svg: GLASS_SVG, topW: 140, botW: 90  }, // wider top, narrower bottom
+  { value: "ta",    label: "TA",     svg: TA_SVG,    topW: 120, botW: 80  }, // paper cup taper
 ];
 
 // size: totalMl = total cup volume, cupH = visual SVG height of the cup
