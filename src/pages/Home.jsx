@@ -22,7 +22,7 @@ export default function Home() {
       id: "shop",
       icon: Wifi,
       label: "I'm a Coffee Shop",
-      sub: "Scan customers & log orders",
+      sub: "Resolve customers & log orders",
       href: "/shop",
       color: "from-stone-800 to-stone-600",
       textColor: "text-stone-50",
@@ -103,7 +103,7 @@ export default function Home() {
         transition={{ delay: 0.8 }}
         className="mt-10 text-xs text-muted-foreground/60 text-center"
       >
-        NFC-powered coffee ordering
+        Chip-linked coffee ordering
       </motion.p>
     </div>
   );

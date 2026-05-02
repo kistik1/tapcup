@@ -10,6 +10,7 @@ import PreferenceForm from "@/components/consumer/PreferenceForm";
 import OrderHistoryList from "@/components/shared/OrderHistoryList";
 import LoadingOverlay from "@/components/shared/LoadingOverlay";
 import CreateProfilePrompt from "@/components/consumer/CreateProfilePrompt";
+import { setSavedPersonalId } from "@/lib/personal-id";
 
 export default function ConsumerPage() {
   const navigate = useNavigate();
@@ -39,6 +40,7 @@ export default function ConsumerPage() {
 
   async function handleIdentified(p) {
     setProfile(p);
+    setSavedPersonalId(p.nfc_id);
     await loadProfileData(p);
   }
 
@@ -131,6 +133,7 @@ export default function ConsumerPage() {
           onCreated={async (createdProfile) => {
             setMissingPersonalId("");
             setProfile(createdProfile);
+            setSavedPersonalId(createdProfile.nfc_id);
             await loadProfileData(createdProfile);
           }}
           onClose={clearPersonalIdRoute}

@@ -2,9 +2,11 @@
 
 **About**
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+View and Edit  your app on [Base44.com](http://Base44.com)
 
 This project contains everything you need to run your app locally.
+
+TapCup uses a URL-driven chip identity flow in production: the chip stores a unique ID, and the app resolves that ID into a consumer profile via `/consumer?personal_id=...`. Browser NFC scanning is treated as optional, not required.
 
 **Edit the code in your local development environment**
 

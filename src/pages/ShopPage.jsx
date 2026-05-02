@@ -1,21 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Wifi, Search, KeyRound, Phone } from "lucide-react";
+import { ArrowLeft, Link2, Search, KeyRound, Phone } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
-import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
+import LoadingOverlay from "@/components/shared/LoadingOverlay";
+import { getSavedPersonalId, setSavedPersonalId } from "@/lib/personal-id";
 
 export default function ShopPage() {
   const [manualInput, setManualInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
-  const [scanning, setScanning] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const [phoneSearching, setPhoneSearching] = useState(false);
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState("");
-  const [nfcStatus, setNfcStatus] = useState("idle"); // idle | scanning | error
 
   async function lookupByNfcId(nfcId) {
     setError("");
@@ -24,6 +24,7 @@ export default function ShopPage() {
     if (results.length === 0) {
       setError("No customer found with that NFC ID");
     } else {
+      setSavedPersonalId(results[0].nfc_id);
       setCustomer(results[0]);
     }
   }
@@ -35,61 +36,37 @@ export default function ShopPage() {
     if (results.length === 0) {
       setError("No customer found with that phone number");
     } else {
+      setSavedPersonalId(results[0].nfc_id);
       setCustomer(results[0]);
     }
   }
 
-  async function startNfcScan() {
-    if (!("NDEFReader" in window)) {
-      setError("Web NFC is not supported on this device/browser. Use manual entry.");
+  async function resolveChipLink() {
+    const q = manualInput.trim() || getSavedPersonalId();
+    if (!q) {
+      setError("Enter an NFC ID first.");
       return;
     }
-    try {
-      setNfcStatus("scanning");
-      setError("");
-      const ndef = new window.NDEFReader();
-      await ndef.scan();
-      // Overlay is now shown — NFC reader is active
-
-      ndef.addEventListener("reading", async ({ serialNumber, message }) => {
-        let id = null;
-        for (const record of message.records) {
-          if (record.recordType === "text") {
-            const text = new TextDecoder().decode(record.data);
-            if (text.startsWith("TAPCUP:")) { id = text.replace("TAPCUP:", ""); break; }
-          }
-        }
-        if (!id && serialNumber) {
-          id = "NFC-" + serialNumber.replace(/:/g, "").substring(0, 6).toUpperCase();
-        }
-        if (id) {
-          setNfcStatus("idle");
-          await lookupByNfcId(id);
-        }
-      });
-
-      ndef.addEventListener("readingerror", () => {
-        setNfcStatus("error");
-        setError("Could not read NFC tag. Try again.");
-      });
-
-    } catch (err) {
-      setNfcStatus("idle");
-      setError(err.message || "NFC scan failed.");
-    }
-  }
-
-  function cancelNfcScan() {
-    setNfcStatus("idle");
+    setResolving(true);
     setError("");
+    window.setTimeout(async () => {
+      try {
+        await lookupByNfcId(q);
+      } finally {
+        setResolving(false);
+      }
+    }, 650);
   }
 
   async function handleManualSearch() {
     const q = manualInput.trim();
     if (!q) return;
-    setScanning(true);
-    await lookupByNfcId(q);
-    setScanning(false);
+    setResolving(true);
+    try {
+      await lookupByNfcId(q);
+    } finally {
+      setResolving(false);
+    }
   }
 
   async function handlePhoneSearch() {
@@ -102,10 +79,10 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <NfcScanOverlay
-        visible={nfcStatus === "scanning"}
-        onCancel={cancelNfcScan}
-        message="Hold the customer's NFC keychain near the top of your device"
+      <LoadingOverlay
+        visible={resolving}
+        title="Resolving chip link"
+        message="Looking up the chip ID and loading the customer profile."
       />
       {/* Header */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
@@ -113,7 +90,7 @@ export default function ShopPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="flex items-center gap-2">
-          <Wifi className="w-5 h-5 text-primary" />
+          <Link2 className="w-5 h-5 text-primary" />
           <span className="font-semibold">Coffee Shop</span>
         </div>
       </div>
@@ -127,34 +104,34 @@ export default function ShopPage() {
             exit={{ opacity: 0, y: -20 }}
             className="flex flex-col md:flex-row min-h-[calc(100vh-56px)]"
           >
-            {/* Main: NFC Scan */}
+            {/* Main: ID Resolve */}
             <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
               <motion.button
-                onClick={startNfcScan}
-                disabled={nfcStatus === "scanning"}
+                onClick={resolveChipLink}
+                disabled={resolving}
                 whileTap={{ scale: 0.97 }}
                 className={`relative flex flex-col items-center justify-center gap-6 w-64 h-64 rounded-full border-4 transition-all shadow-xl cursor-pointer select-none
-                  ${nfcStatus === "scanning"
+                  ${resolving
                     ? "border-amber-400 bg-amber-50"
                     : "border-border bg-card hover:border-amber-400 hover:bg-amber-50/40"
                   }`}
               >
-                {nfcStatus === "scanning" && (
+                {resolving && (
                   <>
                     <div className="absolute inset-0 rounded-full border-4 border-amber-400 animate-ping opacity-20" />
                     <div className="absolute inset-4 rounded-full border-2 border-amber-300 animate-ping opacity-15" />
                   </>
                 )}
                 <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-colors
-                  ${nfcStatus === "scanning" ? "bg-amber-100" : "bg-muted"}`}>
-                  <Wifi className={`w-12 h-12 transition-colors ${nfcStatus === "scanning" ? "text-amber-600 animate-pulse" : "text-muted-foreground"}`} />
+                  ${resolving ? "bg-amber-100" : "bg-muted"}`}>
+                  <Link2 className={`w-12 h-12 transition-colors ${resolving ? "text-amber-600 animate-pulse" : "text-muted-foreground"}`} />
                 </div>
                 <div className="text-center px-4">
                   <p className="font-bold text-lg leading-tight">
-                    {nfcStatus === "scanning" ? "Scanning..." : "Tap to Scan"}
+                    {resolving ? "Resolving..." : "Tap to Resolve"}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {nfcStatus === "scanning" ? "Hold NFC keychain near device" : "Hold customer's NFC keychain"}
+                    {resolving ? "Opening the chip-linked customer record" : "Use the stored personal ID or enter it below"}
                   </p>
                 </div>
               </motion.button>
@@ -183,18 +160,18 @@ export default function ShopPage() {
                     value={manualInput}
                     onChange={e => setManualInput(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && handleManualSearch()}
-                    placeholder="NFC-ABC123"
+                    placeholder="Personal ID"
                     className="h-11 rounded-xl font-mono text-sm"
                   />
                   <Button
                     onClick={handleManualSearch}
-                    disabled={scanning || !manualInput.trim()}
+                    disabled={resolving || !manualInput.trim()}
                     className="h-11 rounded-xl bg-primary text-primary-foreground"
                   >
-                    {scanning ? (
+                    {resolving ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <><Search className="w-4 h-4 mr-1" /> Search by NFC</>
+                      <><Search className="w-4 h-4 mr-1" /> Resolve ID</>
                     )}
                   </Button>
                 </div>

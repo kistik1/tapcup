@@ -13,77 +13,20 @@ export default function ProfileSetup({ user, onCreated }) {
     phone: "",
   });
   const [nfcId, setNfcId] = useState("");
-  const [nfcStatus, setNfcStatus] = useState("idle"); // idle | waiting | success | error | unsupported
+  const [nfcStatus, setNfcStatus] = useState("idle"); // idle | waiting | success | error
   const [nfcMessage, setNfcMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function handleNfcTap() {
-    if (!("NDEFReader" in window)) {
-      // Fallback: generate a virtual NFC ID for unsupported browsers
+    setNfcStatus("waiting");
+    setNfcMessage("Generating chip ID for this profile...");
+    setTimeout(() => {
       const id = "NFC-" + Math.random().toString(36).substring(2, 8).toUpperCase();
       setNfcId(id);
       setNfcStatus("success");
-      setNfcMessage("Virtual NFC ID generated (browser doesn't support Web NFC)");
-      return;
-    }
-
-    try {
-      setNfcStatus("waiting");
-      setNfcMessage("Hold the NFC keychain near the top of your device");
-
-      const ndef = new window.NDEFReader();
-      await ndef.scan();
-
-      // Listen for a tag
-      ndef.addEventListener("reading", async ({ serialNumber, message }) => {
-        // Use serial number as unique ID, or read existing record
-        let id = null;
-
-        // Check if tag already has a TapCup ID written
-        for (const record of message.records) {
-          if (record.recordType === "text") {
-            const decoder = new TextDecoder();
-            const text = decoder.decode(record.data);
-            if (text.startsWith("TAPCUP:")) {
-              id = text.replace("TAPCUP:", "");
-              break;
-            }
-          }
-        }
-
-        // If no existing ID, generate one from serial number
-        if (!id) {
-          const hex = serialNumber
-            ? serialNumber.replace(/:/g, "").substring(0, 6).toUpperCase()
-            : Math.random().toString(36).substring(2, 8).toUpperCase();
-          id = "NFC-" + hex;
-        }
-
-        setNfcId(id);
-        setNfcStatus("success");
-        setNfcMessage("NFC keychain detected!");
-
-        // Write the ID back to the tag
-        try {
-          const writer = new window.NDEFReader();
-          await writer.write({
-            records: [{ recordType: "text", data: `TAPCUP:${id}` }],
-          });
-        } catch {
-          // Write failed silently — ID is still captured
-        }
-      });
-
-      ndef.addEventListener("readingerror", () => {
-        setNfcStatus("error");
-        setNfcMessage("Could not read NFC tag. Try again.");
-      });
-
-    } catch (err) {
-      setNfcStatus("error");
-      setNfcMessage(err.message || "NFC scan failed. Try again.");
-    }
+      setNfcMessage("Chip ID generated and ready for the physical tag");
+    }, 600);
   }
 
   function cancelNfcScan() {
