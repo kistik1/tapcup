@@ -1,41 +1,51 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Coffee, Wifi, Phone, Search, KeyRound } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
+import LoadingOverlay from "@/components/shared/LoadingOverlay";
+import CreateProfilePrompt from "@/components/consumer/CreateProfilePrompt";
 
 export default function IdentifyScreen({ onIdentified }) {
+  const navigate = useNavigate();
   const [phoneInput, setPhoneInput] = useState("");
   const [nfcInput, setNfcInput] = useState("");
-  const [nfcStatus, setNfcStatus] = useState("idle"); // idle | scanning | error
+  const [nfcStatus, setNfcStatus] = useState("idle"); // idle | loading | scanning | error
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [notFoundPhone, setNotFoundPhone] = useState("");
+  const [createSeed, setCreateSeed] = useState(null);
+  const scanSessionRef = useRef(0);
 
   async function lookupByPhone(phone) {
     setError("");
     setSearching(true);
-    const results = await base44.entities.CoffeeProfile.filter({ phone });
-    setSearching(false);
-    if (results.length === 0) {
-      setNotFoundPhone(phone);
-      setShowCreate(true);
-    } else {
-      onIdentified(results[0]);
+    try {
+      const results = await base44.entities.CoffeeProfile.filter({ phone });
+      if (results.length === 0) {
+        setCreateSeed({ prefillPhone: phone, prefillNfcId: "" });
+      } else {
+        onIdentified(results[0]);
+      }
+    } catch (err) {
+      setError(err?.message || "Unable to look up profile");
+    } finally {
+      setSearching(false);
     }
   }
 
   async function lookupByNfcId(nfcId) {
     setError("");
-    const results = await base44.entities.CoffeeProfile.filter({ nfc_id: nfcId });
-    if (results.length === 0) {
-      setNotFoundPhone("");
-      setShowCreate(true);
-    } else {
-      onIdentified(results[0]);
+    try {
+      const results = await base44.entities.CoffeeProfile.filter({ nfc_id: nfcId });
+      if (results.length === 0) {
+        setCreateSeed({ prefillPhone: "", prefillNfcId: nfcId });
+      } else {
+        onIdentified(results[0]);
+      }
+    } catch (err) {
+      setError(err?.message || "Unable to look up profile");
     }
   }
 
@@ -45,31 +55,53 @@ export default function IdentifyScreen({ onIdentified }) {
       return;
     }
     try {
-      setNfcStatus("scanning");
+      const sessionId = ++scanSessionRef.current;
+      setNfcStatus("loading");
       setError("");
       const ndef = new window.NDEFReader();
       await ndef.scan();
+      if (scanSessionRef.current !== sessionId) return;
+      setNfcStatus("scanning");
+
       ndef.addEventListener("reading", async ({ serialNumber, message }) => {
-        let id = null;
+        if (scanSessionRef.current !== sessionId) return;
+
+        let personalId = null;
         for (const record of message.records) {
           if (record.recordType === "text") {
-            const text = new TextDecoder().decode(record.data);
-            if (text.startsWith("TAPCUP:")) { id = text.replace("TAPCUP:", ""); break; }
+            const text = new TextDecoder().decode(record.data).trim();
+            if (text.startsWith("TAPCUP:")) {
+              personalId = text.replace("TAPCUP:", "").trim();
+            } else if (text) {
+              personalId = text;
+            }
+            if (personalId) {
+              break;
+            }
           }
         }
-        if (!id && serialNumber) {
-          id = "NFC-" + serialNumber.replace(/:/g, "").substring(0, 6).toUpperCase();
+
+        if (!personalId && serialNumber) {
+          personalId = "NFC-" + serialNumber.replace(/:/g, "").substring(0, 6).toUpperCase();
         }
-        if (id) {
-          setNfcStatus("idle");
-          await lookupByNfcId(id);
+
+        if (!personalId) {
+          setNfcStatus("error");
+          setError("Could not read NFC tag. Please try again.");
+          return;
         }
+
+        setNfcStatus("idle");
+        navigate(`/consumer?personal_id=${encodeURIComponent(personalId)}`, { replace: true });
       });
+
       ndef.addEventListener("readingerror", () => {
+        if (scanSessionRef.current !== sessionId) return;
         setNfcStatus("error");
         setError("Could not read NFC tag. Please try again.");
       });
     } catch (err) {
+      scanSessionRef.current += 1;
       setNfcStatus("idle");
       setError(err.message || "NFC scan failed.");
     }
@@ -79,16 +111,26 @@ export default function IdentifyScreen({ onIdentified }) {
     const q = nfcInput.trim();
     if (!q) return;
     setSearching(true);
-    await lookupByNfcId(q);
-    setSearching(false);
+    try {
+      await lookupByNfcId(q);
+    } finally {
+      setSearching(false);
+    }
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-      <NfcScanOverlay
-        visible={nfcStatus === "scanning"}
-        onCancel={() => { setNfcStatus("idle"); setError(""); }}
-        message="Hold your NFC keychain near the top of your device"
+      <LoadingOverlay
+        visible={nfcStatus === "loading" || nfcStatus === "scanning"}
+        title={nfcStatus === "loading" ? "Preparing NFC reader" : "Scanning NFC tag"}
+        message={nfcStatus === "loading"
+          ? "Please wait while we open the reader."
+          : "Hold your NFC keychain near the top of your device."}
+        onCancel={() => {
+          scanSessionRef.current += 1;
+          setNfcStatus("idle");
+          setError("");
+        }}
       />
 
       <motion.div
@@ -107,23 +149,33 @@ export default function IdentifyScreen({ onIdentified }) {
         {/* NFC Tap */}
         <motion.button
           onClick={startNfcScan}
-          disabled={nfcStatus === "scanning"}
+          disabled={nfcStatus === "loading" || nfcStatus === "scanning"}
           whileTap={{ scale: 0.97 }}
           className={`relative w-full flex flex-col items-center justify-center gap-4 py-10 rounded-2xl border-2 transition-all cursor-pointer select-none
-            ${nfcStatus === "scanning"
+            ${nfcStatus === "loading" || nfcStatus === "scanning"
               ? "border-amber-400 bg-amber-50"
               : "border-border bg-card hover:border-amber-400 hover:bg-amber-50/40"
             }`}
         >
-          {nfcStatus === "scanning" && (
+          {(nfcStatus === "loading" || nfcStatus === "scanning") && (
             <div className="absolute inset-0 rounded-2xl border-4 border-amber-400 animate-ping opacity-20" />
           )}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${nfcStatus === "scanning" ? "bg-amber-100" : "bg-muted"}`}>
-            <Wifi className={`w-8 h-8 ${nfcStatus === "scanning" ? "text-amber-600 animate-pulse" : "text-muted-foreground"}`} />
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${(nfcStatus === "loading" || nfcStatus === "scanning") ? "bg-amber-100" : "bg-muted"}`}>
+            <Wifi className={`w-8 h-8 ${(nfcStatus === "loading" || nfcStatus === "scanning") ? "text-amber-600 animate-pulse" : "text-muted-foreground"}`} />
           </div>
           <div className="text-center">
-            <p className="font-bold">{nfcStatus === "scanning" ? "Scanning..." : "Tap NFC"}</p>
-            <p className="text-sm text-muted-foreground">Hold your NFC keychain near the device</p>
+            <p className="font-bold">
+              {nfcStatus === "loading"
+                ? "Loading..."
+                : nfcStatus === "scanning"
+                  ? "Scanning..."
+                  : "Tap NFC"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {nfcStatus === "loading"
+                ? "Opening the NFC reader"
+                : "Hold your NFC keychain near the device"}
+            </p>
           </div>
         </motion.button>
 
@@ -202,81 +254,17 @@ export default function IdentifyScreen({ onIdentified }) {
         )}
       </div>
 
-      {/* Create profile modal */}
-      <AnimatePresence>
-        {showCreate && (
-          <CreateProfilePrompt
-            prefillPhone={notFoundPhone}
-            onCreated={onIdentified}
-            onClose={() => setShowCreate(false)}
-          />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// Inline mini-form for creating a new profile
-function CreateProfilePrompt({ prefillPhone, onCreated, onClose }) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState(prefillPhone || "");
-  const [nfcId] = useState("NFC-" + Math.random().toString(36).substring(2, 8).toUpperCase());
-  const [saving, setSaving] = useState(false);
-
-  async function handleCreate(e) {
-    e.preventDefault();
-    if (!name) return;
-    setSaving(true);
-    const profile = await base44.entities.CoffeeProfile.create({
-      display_name: name,
-      phone,
-      nfc_id: nfcId,
-      user_email: phone || nfcId,
-    });
-    onCreated(profile);
-    setSaving(false);
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, y: 60 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 60 }}
-        className="relative bg-background rounded-t-3xl sm:rounded-3xl w-full max-w-sm p-6 shadow-2xl"
-      >
-        <h3 className="font-semibold text-lg mb-1">Profile Not Found</h3>
-        <p className="text-sm text-muted-foreground mb-5">Create a new profile to get started</p>
-        <form onSubmit={handleCreate} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Name</label>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Your name"
-              required
-              className="mt-1 w-full h-11 px-3 rounded-xl border border-input bg-transparent text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Phone</label>
-            <input
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="+1 555 000 0000"
-              className="mt-1 w-full h-11 px-3 rounded-xl border border-input bg-transparent text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground font-mono">NFC ID: {nfcId}</p>
-          <Button type="submit" disabled={saving || !name} className="w-full h-11 rounded-xl">
-            {saving ? "Creating..." : "Create Profile"}
-          </Button>
-          <button type="button" onClick={onClose} className="w-full text-sm text-muted-foreground hover:text-foreground">
-            Cancel
-          </button>
-        </form>
-      </motion.div>
+      {createSeed && (
+        <CreateProfilePrompt
+          prefillPhone={createSeed.prefillPhone}
+          prefillNfcId={createSeed.prefillNfcId}
+          onCreated={(profile) => {
+            setCreateSeed(null);
+            onIdentified(profile);
+          }}
+          onClose={() => setCreateSeed(null)}
+        />
+      )}
     </div>
   );
 }

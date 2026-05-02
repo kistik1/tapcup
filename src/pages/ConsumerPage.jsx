@@ -1,40 +1,49 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Plus, Star, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import IdentifyScreen from "@/components/consumer/IdentifyScreen";
 import PreferenceCard from "@/components/consumer/PreferenceCard";
 import PreferenceForm from "@/components/consumer/PreferenceForm";
 import OrderHistoryList from "@/components/shared/OrderHistoryList";
+import LoadingOverlay from "@/components/shared/LoadingOverlay";
+import CreateProfilePrompt from "@/components/consumer/CreateProfilePrompt";
 
 export default function ConsumerPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const personalId = searchParams.get("personal_id");
   const [profile, setProfile] = useState(null);
   const [preferences, setPreferences] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [resolvingPersonalId, setResolvingPersonalId] = useState(false);
+  const [missingPersonalId, setMissingPersonalId] = useState("");
   const [showPrefForm, setShowPrefForm] = useState(false);
   const [editingPref, setEditingPref] = useState(null);
   const [tab, setTab] = useState("prefs"); // prefs | history
 
   async function loadProfileData(p) {
     setLoading(true);
-    const prefs = await base44.entities.CoffeePreference.filter({ profile_id: p.id });
-    setPreferences(prefs);
-    const ords = await base44.entities.Order.filter({ profile_id: p.id });
-    setOrders(ords.sort((a, b) => new Date(b.ordered_at || b.created_date) - new Date(a.ordered_at || a.created_date)));
-    setLoading(false);
+    try {
+      const prefs = await base44.entities.CoffeePreference.filter({ profile_id: p.id });
+      setPreferences(prefs);
+      const ords = await base44.entities.Order.filter({ profile_id: p.id });
+      setOrders(ords.sort((a, b) => new Date(b.ordered_at || b.created_date) - new Date(a.ordered_at || a.created_date)));
+    } finally {
+      setLoading(false);
+    }
   }
 
-  async function loadData() {
-    if (!profile) return;
-    await loadProfileData(profile);
-  }
-
-  function handleIdentified(p) {
+  async function handleIdentified(p) {
     setProfile(p);
-    loadProfileData(p);
+    await loadProfileData(p);
+  }
+
+  function clearPersonalIdRoute() {
+    navigate("/consumer", { replace: true });
   }
 
   function handleSignOut() {
@@ -42,6 +51,9 @@ export default function ConsumerPage() {
     setPreferences([]);
     setOrders([]);
     setTab("prefs");
+    if (personalId) {
+      clearPersonalIdRoute();
+    }
   }
 
   async function setDefault(pref) {
@@ -56,14 +68,87 @@ export default function ConsumerPage() {
     await loadProfileData(profile);
   }
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function resolvePersonalId() {
+      if (!personalId) {
+        setResolvingPersonalId(false);
+        setMissingPersonalId("");
+        return;
+      }
+
+      setResolvingPersonalId(true);
+      setMissingPersonalId("");
+      setProfile(null);
+      setPreferences([]);
+      setOrders([]);
+      setTab("prefs");
+
+      try {
+        const results = await base44.entities.CoffeeProfile.filter({ nfc_id: personalId });
+        if (cancelled) return;
+
+        if (results.length === 0) {
+          setMissingPersonalId(personalId);
+          return;
+        }
+
+        await handleIdentified(results[0]);
+      } catch {
+        if (!cancelled) {
+          setMissingPersonalId(personalId);
+        }
+      } finally {
+        if (!cancelled) {
+          setResolvingPersonalId(false);
+        }
+      }
+    }
+
+    resolvePersonalId();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [personalId]);
+
   if (!profile) {
+    if (resolvingPersonalId) {
+      return (
+        <LoadingOverlay
+          visible
+          title="Loading your TapCup profile"
+          message="We found your chip ID and are opening your profile now."
+        />
+      );
+    }
+
+    if (missingPersonalId) {
+      return (
+        <CreateProfilePrompt
+          prefillNfcId={missingPersonalId}
+          onCreated={async (createdProfile) => {
+            setMissingPersonalId("");
+            setProfile(createdProfile);
+            await loadProfileData(createdProfile);
+          }}
+          onClose={clearPersonalIdRoute}
+          title="Profile Not Found"
+          description="Create a new profile for this chip ID."
+        />
+      );
+    }
+
     return <IdentifyScreen onIdentified={handleIdentified} />;
   }
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-amber-200 border-t-amber-800 rounded-full animate-spin" />
-    </div>
+    <LoadingOverlay
+      visible
+      title="Loading profile data"
+      message="Please wait while we fetch preferences and order history."
+    />
   );
 
   const defaultPref = preferences.find(p => p.is_default);
