@@ -50,14 +50,20 @@ export default function IdentifyScreen({ onIdentified }) {
   }
 
   async function startNfcScan() {
-    if (!("NDEFReader" in window)) {
-      setError("Web NFC is not supported on this device/browser. Use manual entry.");
-      return;
-    }
     try {
       const sessionId = ++scanSessionRef.current;
       setNfcStatus("loading");
       setError("");
+
+      if (!("NDEFReader" in window)) {
+        setTimeout(() => {
+          if (scanSessionRef.current !== sessionId) return;
+          setNfcStatus("idle");
+          setError("NFC scanning isn't available here. Use NFC ID or phone number below.");
+        }, 600);
+        return;
+      }
+
       const ndef = new window.NDEFReader();
       await ndef.scan();
       if (scanSessionRef.current !== sessionId) return;
@@ -103,7 +109,7 @@ export default function IdentifyScreen({ onIdentified }) {
     } catch (err) {
       scanSessionRef.current += 1;
       setNfcStatus("idle");
-      setError(err.message || "NFC scan failed.");
+      setError(err?.message || "NFC scan failed.");
     }
   }
 
