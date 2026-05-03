@@ -84,7 +84,7 @@ export default function SettingsPage() {
         <div className="pt-2">
           {user ? (
             <Button
-              onClick={() => { base44.auth.logout(); setUser(null); setProfile(null); }}
+              onClick={() => { setUser(null); setProfile(null); }}
               variant="outline"
               className="w-full h-12 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
             >
