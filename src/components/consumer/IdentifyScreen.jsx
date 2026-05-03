@@ -5,8 +5,8 @@ import { Coffee, Phone, Search, KeyRound } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import LoadingOverlay from "@/components/shared/LoadingOverlay";
 import CreateProfilePrompt from "@/components/consumer/CreateProfilePrompt";
+import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
 import { getSavedPersonalId, setSavedPersonalId } from "@/lib/personal-id";
 
 export default function IdentifyScreen({ onIdentified }) {
@@ -14,6 +14,8 @@ export default function IdentifyScreen({ onIdentified }) {
   const [phoneInput, setPhoneInput] = useState("");
   const [nfcInput, setNfcInput] = useState("");
   const [nfcLoading, setNfcLoading] = useState(false);
+  const [scanVisible, setScanVisible] = useState(false);
+  const [scanMessage, setScanMessage] = useState("");
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const [createSeed, setCreateSeed] = useState(null);
@@ -53,13 +55,19 @@ export default function IdentifyScreen({ onIdentified }) {
 
   async function openSavedChip() {
     setError("");
+    setScanMessage("Checking your saved personal ID...");
+    setScanVisible(true);
     setNfcLoading(true);
-    window.setTimeout(() => {
-      const savedPersonalId = getSavedPersonalId() || nfcInput.trim();
-      setNfcLoading(false);
 
+    window.setTimeout(() => {
+      const savedPersonalId = getSavedPersonalId();
       if (!savedPersonalId) {
-        setError("No saved chip ID yet. Use NFC ID or phone number below.");
+        setScanMessage("No saved chip ID yet. Use phone number or manual NFC ID below.");
+        setNfcLoading(false);
+        window.setTimeout(() => {
+          setScanVisible(false);
+          setScanMessage("");
+        }, 1200);
         return;
       }
 
@@ -80,10 +88,14 @@ export default function IdentifyScreen({ onIdentified }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-      <LoadingOverlay
-        visible={nfcLoading}
-        title="Opening chip link"
-        message="We’re resolving the saved personal ID and redirecting now."
+      <NfcScanOverlay
+        visible={scanVisible}
+        onCancel={() => {
+          setScanVisible(false);
+          setScanMessage("");
+          setNfcLoading(false);
+        }}
+        message={scanMessage || "Hold the NFC keychain near the top of your device"}
       />
 
       <motion.div
