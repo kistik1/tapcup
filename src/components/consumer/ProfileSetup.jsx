@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Coffee, Wifi, CheckCircle, AlertCircle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -17,22 +17,39 @@ export default function ProfileSetup({ user, onCreated }) {
   const [nfcMessage, setNfcMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const nfcTimerRef = useRef(null);
+
+  function clearNfcTimer() {
+    if (nfcTimerRef.current) {
+      window.clearTimeout(nfcTimerRef.current);
+      nfcTimerRef.current = null;
+    }
+  }
 
   async function handleNfcTap() {
+    clearNfcTimer();
     setNfcStatus("waiting");
     setNfcMessage("Generating chip ID for this profile...");
-    setTimeout(() => {
+    nfcTimerRef.current = window.setTimeout(() => {
       const id = "NFC-" + Math.random().toString(36).substring(2, 8).toUpperCase();
       setNfcId(id);
       setNfcStatus("success");
       setNfcMessage("Chip ID generated and ready for the physical tag");
+      nfcTimerRef.current = null;
     }, 600);
   }
 
   function cancelNfcScan() {
+    clearNfcTimer();
     setNfcStatus("idle");
     setNfcMessage("");
   }
+
+  useEffect(() => {
+    return () => {
+      clearNfcTimer();
+    };
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();

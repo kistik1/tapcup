@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Link2, Search, KeyRound, Phone } from "lucide-react";
@@ -6,16 +6,26 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
-import LoadingOverlay from "@/components/shared/LoadingOverlay";
+import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
 import { getSavedPersonalId, setSavedPersonalId } from "@/lib/personal-id";
 
 export default function ShopPage() {
   const [manualInput, setManualInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [resolving, setResolving] = useState(false);
+  const [scanVisible, setScanVisible] = useState(false);
+  const [scanMessage, setScanMessage] = useState("");
   const [phoneSearching, setPhoneSearching] = useState(false);
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState("");
+  const resolveTimerRef = useRef(null);
+
+  function clearResolveTimer() {
+    if (resolveTimerRef.current) {
+      window.clearTimeout(resolveTimerRef.current);
+      resolveTimerRef.current = null;
+    }
+  }
 
   async function lookupByNfcId(nfcId) {
     setError("");
@@ -23,9 +33,11 @@ export default function ShopPage() {
     const results = await base44.entities.CoffeeProfile.filter({ nfc_id: nfcId });
     if (results.length === 0) {
       setError("No customer found with that NFC ID");
+      return null;
     } else {
       setSavedPersonalId(results[0].nfc_id);
       setCustomer(results[0]);
+      return results[0];
     }
   }
 
@@ -35,9 +47,11 @@ export default function ShopPage() {
     const results = await base44.entities.CoffeeProfile.filter({ phone });
     if (results.length === 0) {
       setError("No customer found with that phone number");
+      return null;
     } else {
       setSavedPersonalId(results[0].nfc_id);
       setCustomer(results[0]);
+      return results[0];
     }
   }
 
@@ -47,15 +61,25 @@ export default function ShopPage() {
       setError("Enter an NFC ID first.");
       return;
     }
+    clearResolveTimer();
     setResolving(true);
     setError("");
-    window.setTimeout(async () => {
+    setScanMessage("Waiting for NFC scan...");
+    setScanVisible(true);
+    resolveTimerRef.current = window.setTimeout(async () => {
       try {
-        await lookupByNfcId(q);
+        const result = await lookupByNfcId(q);
+        if (result) {
+          setScanMessage("NFC detected. Opening customer profile...");
+          setScanVisible(false);
+        } else {
+          setScanMessage("No customer found. Tap X to close or use manual NFC ID/phone.");
+        }
       } finally {
+        resolveTimerRef.current = null;
         setResolving(false);
       }
-    }, 650);
+    }, 1500);
   }
 
   async function handleManualSearch() {
@@ -77,12 +101,25 @@ export default function ShopPage() {
     setPhoneSearching(false);
   }
 
+  function closeScanOverlay() {
+    clearResolveTimer();
+    setScanVisible(false);
+    setScanMessage("");
+    setResolving(false);
+  }
+
+  useEffect(() => {
+    return () => {
+      clearResolveTimer();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      <LoadingOverlay
-        visible={resolving}
-        title="Resolving chip link"
-        message="Looking up the chip ID and loading the customer profile."
+      <NfcScanOverlay
+        visible={scanVisible}
+        onCancel={closeScanOverlay}
+        message={scanMessage || "Hold the NFC keychain near the top of your device"}
       />
       {/* Header */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
@@ -223,7 +260,7 @@ export default function ShopPage() {
             className="max-w-lg mx-auto px-4 pt-8 pb-24"
           >
             <button
-              onClick={() => { setCustomer(null); setManualInput(""); setPhoneInput(""); setError(""); setNfcStatus("idle"); }}
+              onClick={() => { setCustomer(null); setManualInput(""); setPhoneInput(""); setError(""); }}
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-6 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> Scan again
