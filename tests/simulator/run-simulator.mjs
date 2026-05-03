@@ -140,8 +140,13 @@ async function clearScenarioArtifacts() {
 async function runPlaywright() {
   await clearScenarioArtifacts();
   const playwrightArgs = ['test', '-c', 'playwright.simulator.config.js'];
+  if (mode === 'nfc') {
+    playwrightArgs.push('--grep', 'chip id flag');
+  }
   if (mode !== 'all') {
-    playwrightArgs.push('--grep', mode);
+    if (mode !== 'nfc') {
+      playwrightArgs.push('--grep', mode);
+    }
   }
 
   const result = spawnSync(playwrightPath, playwrightArgs, {

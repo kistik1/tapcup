@@ -22,7 +22,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env.CI && !process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID,
     env: {
       VITE_TAPCUP_SIMULATOR: 'true',
       VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID: process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID || '',

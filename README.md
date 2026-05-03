@@ -8,6 +8,8 @@ This project contains everything you need to run your app locally.
 
 TapCup uses a URL-driven chip identity flow in production: the chip stores a unique ID, and the app resolves that ID into a consumer profile via `/consumer?personal_id=...`. Browser NFC scanning is treated as optional, not required.
 
+App URL: https://tap-cup.base44.app/
+
 ### Simulator
 
 Run the browser simulator with:
@@ -21,11 +23,21 @@ Each simulator run prints a concise pass/fail summary after the Playwright outpu
 Run a narrower scenario set:
 
 ```bash
+npm run sim:nfc
 npm run sim:consumer
 npm run sim:shop
 ```
 
 Simulator artifacts are written to `simulator-artifacts/` and include JSON step logs, plain-text logs, screenshots, and Playwright traces on failure.
+
+To simulate a consumer chip scan from the simulator, pass a chip ID flag:
+
+```bash
+npm run sim:nfc -- --chip-id SIM-111111
+npm run sim:test -- --consumer-chip-id SIM-111111
+```
+
+`sim:nfc -- --chip-id ...` runs only the NFC redirect test, preloads the simulator NFC panel with the consumer chip ID, and routes the scan into `/consumer?personal_id=...`.
 
 To inspect the detailed artifact report after a run, use:
 

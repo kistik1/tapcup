@@ -11,6 +11,7 @@
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
     "sim:test": "node tests/simulator/run-simulator.mjs",
+    "sim:nfc": "node tests/simulator/run-simulator.mjs nfc",
     "sim:consumer": "node tests/simulator/run-simulator.mjs consumer",
     "sim:shop": "node tests/simulator/run-simulator.mjs shop",
     "sim:report": "node tests/simulator/run-simulator.mjs --report"
