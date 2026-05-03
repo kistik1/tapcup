@@ -77,7 +77,7 @@ export default function IdentifyScreen({ onIdentified }) {
 
       setScanMessage("NFC detected. Redirecting...");
       navigate(`/consumer?personal_id=${encodeURIComponent(savedPersonalId)}`, { replace: true });
-    }, 1500);
+    }, 20000);
   }
 
   async function handleManualNfc() {

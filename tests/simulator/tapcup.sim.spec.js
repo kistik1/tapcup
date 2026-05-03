@@ -7,6 +7,7 @@ import { runScenario } from './lib/scenario-runner.mjs';
 
 const PERSONAL_ID_STORAGE_KEY = 'tapcup_last_personal_id';
 const UNKNOWN_PERSONAL_ID = 'SIM-NEW-0001';
+const NFC_SCAN_DELAY_MS = 20000;
 
 async function seedSavedPersonalId(page, personalId) {
   await page.addInitScript(
@@ -31,6 +32,7 @@ test.describe('TapCup simulator', () => {
       await step('Tap NFC', `Redirect to /consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`, async () => {
         await page.getByTestId('consumer-tap-nfc').click();
         await expect(page.getByText('Ready to Scan')).toBeVisible();
+        await page.waitForTimeout(NFC_SCAN_DELAY_MS + 500);
         await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`));
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
         await expect(page.getByText(SIMULATOR_PRIMARY_PREFERENCE.name)).toBeVisible();
@@ -121,6 +123,7 @@ test.describe('TapCup simulator', () => {
 
       await step('Tap NFC again', 'The saved chip id should redirect back to the consumer profile', async () => {
         await page.getByTestId('consumer-tap-nfc').click();
+        await page.waitForTimeout(NFC_SCAN_DELAY_MS + 500);
         await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`));
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
         return 'Saved chip id restored the profile route';
@@ -141,6 +144,7 @@ test.describe('TapCup simulator', () => {
       await step('Tap NFC', 'The shop should open the matched customer profile', async () => {
         await page.getByTestId('shop-tap-nfc').click();
         await expect(page.getByText('Ready to Scan')).toBeVisible();
+        await page.waitForTimeout(NFC_SCAN_DELAY_MS + 500);
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
         return `Opened shop profile for ${SIMULATOR_PRIMARY_PROFILE.display_name}`;
       });
@@ -177,6 +181,7 @@ test.describe('TapCup simulator', () => {
         await page.getByTestId('shop-tap-nfc').click();
         await expect(page.getByText('Ready to Scan')).toBeVisible();
         await expect(page.getByText('Waiting for NFC scan...')).toBeVisible();
+        await page.waitForTimeout(20500);
         await expect(page.getByText(/No saved chip ID yet/i)).toBeVisible();
         return 'Overlay stayed open with the no-saved-chip message';
       });
@@ -202,6 +207,7 @@ test.describe('TapCup simulator', () => {
 
       await step('Open customer profile', 'The seeded chip should open the customer profile', async () => {
         await page.getByTestId('shop-tap-nfc').click();
+        await page.waitForTimeout(NFC_SCAN_DELAY_MS + 500);
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
         await expect(page.getByText(SIMULATOR_PRIMARY_PREFERENCE.name)).toBeVisible();
         return `Opened shop profile for ${SIMULATOR_PRIMARY_PROFILE.display_name}`;

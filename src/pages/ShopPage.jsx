@@ -80,7 +80,7 @@ export default function ShopPage() {
         resolveTimerRef.current = null;
         setResolving(false);
       }
-    }, 1500);
+    }, 20000);
   }
 
   async function handleManualSearch() {
