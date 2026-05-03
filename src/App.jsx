@@ -5,6 +5,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import SimulatorNfcPanel from '@/components/simulator/SimulatorNfcPanel';
+import { isSimulatorMode } from '@/lib/simulator/runtime';
 // Add page imports here
 import Home from './pages/Home';
 import ConsumerPage from './pages/ConsumerPage';
@@ -48,6 +50,7 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <AuthenticatedApp />
+          {isSimulatorMode && <SimulatorNfcPanel />}
         </Router>
         <Toaster />
       </QueryClientProvider>

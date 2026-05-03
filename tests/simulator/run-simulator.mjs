@@ -4,13 +4,45 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
-const mode = args.find((value) => !value.startsWith('-')) || 'all';
-const reportOnly = args.includes('--report');
+let mode = 'all';
+let reportOnly = false;
+let consumerChipId = '';
 const artifactDir = path.resolve(process.cwd(), 'simulator-artifacts');
 const playwrightBin = process.platform === 'win32' ? 'playwright.cmd' : 'playwright';
 const playwrightPath = path.resolve(process.cwd(), 'node_modules', '.bin', playwrightBin);
 
 mkdirSync(artifactDir, { recursive: true });
+
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+  if (arg === '--report') {
+    reportOnly = true;
+    continue;
+  }
+  if (arg === '--consumer-chip-id' || arg === '--chip-id') {
+    const next = args[i + 1];
+    if (next && !next.startsWith('-')) {
+      consumerChipId = next;
+      i += 1;
+    }
+    continue;
+  }
+  if (arg.startsWith('--consumer-chip-id=')) {
+    consumerChipId = arg.split('=')[1] || '';
+    continue;
+  }
+  if (arg.startsWith('--chip-id=')) {
+    consumerChipId = arg.split('=')[1] || '';
+    continue;
+  }
+  if (!arg.startsWith('-') && mode === 'all') {
+    mode = arg;
+  }
+}
+
+if (consumerChipId) {
+  process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID = consumerChipId;
+}
 
 async function showReportSummary() {
   if (!existsSync(artifactDir)) {
@@ -45,40 +77,53 @@ async function showReportSummary() {
 }
 
 async function showRunSummary() {
-  if (!existsSync(artifactDir)) {
-    console.log('No simulator artifacts found.');
+  const reportPath = path.join(artifactDir, 'playwright-report.json');
+  if (!existsSync(reportPath)) {
+    console.log(`No Playwright simulator report found in ${artifactDir}`);
     return;
   }
 
-  const files = (await readdir(artifactDir)).filter((file) => file.endsWith('.json') && file !== 'playwright-report.json');
-  if (files.length === 0) {
-    console.log(`No JSON simulator reports found in ${artifactDir}`);
-    return;
-  }
-
+  const root = JSON.parse(await readFile(reportPath, 'utf8'));
   const reports = [];
   let passed = 0;
   let failed = 0;
 
-  for (const file of files.sort()) {
-    const content = JSON.parse(await readFile(path.join(artifactDir, file), 'utf8'));
+  function collectSpecs(suites = []) {
+    const specs = [];
+    for (const suite of suites) {
+      if (Array.isArray(suite.specs)) {
+        specs.push(...suite.specs);
+      }
+      if (Array.isArray(suite.suites) && suite.suites.length > 0) {
+        specs.push(...collectSpecs(suite.suites));
+      }
+    }
+    return specs;
+  }
+
+  const specs = collectSpecs(root.suites || []);
+  for (const spec of specs.sort((a, b) => a.title.localeCompare(b.title))) {
+    const test = spec.tests?.[0];
+    const result = test?.results?.[0];
+    const attachments = result?.attachments || [];
+    const status = result?.status === 'passed' ? 'passed' : 'failed';
     reports.push({
-      name: content.name,
-      status: content.status,
-      json: content.artifacts?.json,
-      log: content.artifacts?.log,
-      screenshot: content.artifacts?.screenshot,
+      name: spec.title,
+      status,
+      attachments,
     });
-    if (content.status === 'passed') passed += 1;
+    if (status === 'passed') passed += 1;
     else failed += 1;
   }
 
   console.log(`Simulator summary: ${passed} passed, ${failed} failed, ${reports.length} total`);
   for (const report of reports) {
     console.log(`${report.status.toUpperCase()} ${report.name}`);
-    if (report.json) console.log(`  json: ${report.json}`);
-    if (report.log) console.log(`  log: ${report.log}`);
-    if (report.screenshot) console.log(`  screenshot: ${report.screenshot}`);
+    for (const attachment of report.attachments) {
+      if (attachment?.path) {
+        console.log(`  attachment: ${attachment.path}`);
+      }
+    }
   }
 }
 

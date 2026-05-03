@@ -25,6 +25,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       VITE_TAPCUP_SIMULATOR: 'true',
+      VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID: process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID || '',
     },
   },
 });

@@ -8,6 +8,7 @@ import { runScenario } from './lib/scenario-runner.mjs';
 const PERSONAL_ID_STORAGE_KEY = 'tapcup_last_personal_id';
 const UNKNOWN_PERSONAL_ID = 'SIM-NEW-0001';
 const NFC_SCAN_DELAY_MS = 20000;
+const SIMULATOR_CONSUMER_CHIP_ID = process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID?.trim() || '';
 
 async function seedSavedPersonalId(page, personalId) {
   await page.addInitScript(
@@ -127,6 +128,46 @@ test.describe('TapCup simulator', () => {
         await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`));
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
         return 'Saved chip id restored the profile route';
+      });
+    });
+  });
+
+  test('simulator: manual nfc panel can push a chip read into consumer', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'simulator manual nfc panel pushes a chip read into consumer', async ({ step }) => {
+      await step('Open home page', 'Simulator panel should be visible on localhost', async () => {
+        await page.goto('/');
+        await expect(page.getByTestId('simulator-nfc-panel')).toBeVisible();
+        return 'Simulator panel loaded';
+      });
+
+      await step('Push chip read', 'The simulator should route the chip ID into the consumer flow', async () => {
+        await page.getByTestId('simulator-nfc-chip').fill(SIMULATOR_PRIMARY_PROFILE.nfc_id);
+        await page.getByTestId('simulator-nfc-target').selectOption('consumer');
+        await page.getByTestId('simulator-nfc-run').click();
+        await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`));
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        return `Simulated chip read for ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`;
+      });
+    });
+  });
+
+  test('simulator: consumer chip flag preloads the NFC panel', async ({ page }, testInfo) => {
+    test.skip(!SIMULATOR_CONSUMER_CHIP_ID, 'consumer chip flag not set');
+
+    await runScenario(testInfo, page, 'simulator consumer chip flag preloads the nfc panel', async ({ step }) => {
+      await step('Open home page', 'Simulator panel should preload the consumer chip ID', async () => {
+        await page.goto('/');
+        await expect(page.getByTestId('simulator-nfc-panel')).toBeVisible();
+        await expect(page.getByTestId('simulator-nfc-chip')).toHaveValue(SIMULATOR_CONSUMER_CHIP_ID);
+        await expect(page.getByTestId('simulator-consumer-chip-flag')).toBeVisible();
+        return `Loaded consumer chip flag ${SIMULATOR_CONSUMER_CHIP_ID}`;
+      });
+
+      await step('Simulate consumer chip scan', 'The panel should route the consumer chip into the consumer flow', async () => {
+        await page.getByTestId('simulator-nfc-run').click();
+        await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_CONSUMER_CHIP_ID}`));
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        return `Simulated consumer chip scan for ${SIMULATOR_CONSUMER_CHIP_ID}`;
       });
     });
   });
