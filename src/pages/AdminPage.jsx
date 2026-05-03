@@ -14,9 +14,16 @@ import {
 } from "@/lib/personal-id";
 
 const ADMIN_SESSION_KEY = "tapcup_admin_unlocked";
-const ADMIN_PASSWORD = import.meta.env.VITE_TAPCUP_ADMIN_PASSWORD = "admin";
+const ADMIN_PASSWORD = import.meta.env.VITE_TAPCUP_ADMIN_PASSWORD || "admin";
 
-const emptyShopForm = { name: "", address: "", phone: "", notes: "" };
+const emptyShopForm = {
+  name: "",
+  address: "",
+  phone: "",
+  login_username: "",
+  login_password: "",
+  notes: "",
+};
 const emptyStaffForm = {
   display_name: "",
   email: "",
@@ -132,15 +139,50 @@ export default function AdminPage() {
 
   async function saveShop(event) {
     event.preventDefault();
-    if (!shopForm.name.trim()) return;
+    if (!shopForm.name.trim() || !shopForm.login_username.trim() || !shopForm.login_password.trim()) return;
     setSaving(true);
+    setError("");
+
     try {
+      const username = shopForm.login_username.trim();
+      const duplicates = await entityApi("Shop").filter({ login_username: username });
+      const duplicate = duplicates.find((shop) => shop.id !== editingShop?.id && shop.status !== "inactive");
+      if (duplicate) {
+        setError("A shop with that username already exists.");
+        return;
+      }
+
+      const credentialsChanged = !editingShop
+        || editingShop.login_username !== username
+        || editingShop.login_password !== shopForm.login_password;
+      const payload = {
+        ...shopForm,
+        login_username: username,
+        credentials_updated_at: credentialsChanged ? new Date().toISOString() : editingShop?.credentials_updated_at,
+        username_updated_by_role: credentialsChanged ? "admin" : editingShop?.username_updated_by_role,
+      };
+
       if (editingShop) {
-        await entityApi("Shop").update(editingShop.id, { ...shopForm, status: editingShop.status || "active" });
-        await createAuditLog("update_shop", "Shop", editingShop.id, shopForm);
+        await entityApi("Shop").update(editingShop.id, { ...payload, status: editingShop.status || "active" });
+        await createAuditLog("update_shop", "Shop", editingShop.id, {
+          name: payload.name,
+          login_username: payload.login_username,
+          credentials_changed: credentialsChanged,
+        });
+        if (credentialsChanged) {
+          await createAuditLog("update_shop_credentials", "Shop", editingShop.id, {
+            previous_username: editingShop.login_username || "",
+            next_username: payload.login_username,
+            password_changed: editingShop.login_password !== payload.login_password,
+          });
+        }
       } else {
-        const created = await entityApi("Shop").create({ ...shopForm, status: "active" });
-        await createAuditLog("create_shop", "Shop", created.id, shopForm);
+        const created = await entityApi("Shop").create({ ...payload, status: "active" });
+        await createAuditLog("create_shop", "Shop", created.id, {
+          name: payload.name,
+          login_username: payload.login_username,
+          credentials_created: true,
+        });
       }
       setShopForm(emptyShopForm);
       setEditingShop(null);
@@ -215,6 +257,8 @@ export default function AdminPage() {
       name: shop.name || "",
       address: shop.address || "",
       phone: shop.phone || "",
+      login_username: shop.login_username || "",
+      login_password: shop.login_password || "",
       notes: shop.notes || "",
     });
   }
@@ -315,9 +359,11 @@ export default function AdminPage() {
                   <form onSubmit={saveShop} className="grid md:grid-cols-2 gap-3 mb-4">
                     <Input value={shopForm.name} onChange={(event) => setShopForm((form) => ({ ...form, name: event.target.value }))} placeholder="Shop name" className="h-11 rounded-xl" />
                     <Input value={shopForm.phone} onChange={(event) => setShopForm((form) => ({ ...form, phone: event.target.value }))} placeholder="Phone" className="h-11 rounded-xl" />
+                    <Input value={shopForm.login_username} onChange={(event) => setShopForm((form) => ({ ...form, login_username: event.target.value }))} placeholder="Shop username" className="h-11 rounded-xl" autoComplete="username" />
+                    <Input value={shopForm.login_password} onChange={(event) => setShopForm((form) => ({ ...form, login_password: event.target.value }))} placeholder="Shop password" type="password" className="h-11 rounded-xl" autoComplete="new-password" />
                     <Input value={shopForm.address} onChange={(event) => setShopForm((form) => ({ ...form, address: event.target.value }))} placeholder="Address" className="h-11 rounded-xl md:col-span-2" />
                     <Textarea value={shopForm.notes} onChange={(event) => setShopForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Notes" className="rounded-xl md:col-span-2" />
-                    <Button type="submit" disabled={saving || !shopForm.name.trim()} className="h-11 rounded-xl">
+                    <Button type="submit" disabled={saving || !shopForm.name.trim() || !shopForm.login_username.trim() || !shopForm.login_password.trim()} className="h-11 rounded-xl">
                       {editingShop ? "Save Shop" : "Add Shop"}
                     </Button>
                     {editingShop && (
@@ -331,7 +377,7 @@ export default function AdminPage() {
                       <RecordRow
                         key={shop.id}
                         title={shop.name}
-                        detail={`${shop.status || "active"} · ${shop.phone || "no phone"}`}
+                        detail={`${shop.status || "active"} · @${shop.login_username || "no username"} · ${shop.phone || "no phone"}`}
                         inactive={shop.status === "inactive"}
                         onEdit={() => beginEditShop(shop)}
                         onDeactivate={() => deactivateShop(shop)}

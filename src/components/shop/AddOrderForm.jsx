@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function AddOrderForm({ profile, preferences, onClose, onSaved }) {
+export default function AddOrderForm({ profile, preferences, shopName = "Coffee Shop", onClose, onSaved }) {
   const defaultPref = preferences.find(p => p.is_default);
   const [selectedPrefId, setSelectedPrefId] = useState(defaultPref?.id || (preferences[0]?.id || ""));
   const [notes, setNotes] = useState("");
@@ -22,7 +22,7 @@ export default function AddOrderForm({ profile, preferences, onClose, onSaved })
       user_email: profile.user_email,
       preference_id: selectedPrefId || null,
       preference_snapshot: pref || null,
-      shop_name: "Coffee Shop",
+      shop_name: shopName,
       barista_notes: notes,
       price: price ? parseFloat(price) : null,
       status: "Completed",

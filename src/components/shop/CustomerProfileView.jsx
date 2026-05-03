@@ -7,7 +7,7 @@ import OrderHistoryList from "@/components/shared/OrderHistoryList";
 import ProfileChipSetup from "@/components/shared/ProfileChipSetup";
 import AddOrderForm from "./AddOrderForm";
 
-export default function CustomerProfileView({ profile, compact, enableChipSetup = false, onProfileUpdated }) {
+export default function CustomerProfileView({ profile, compact, enableChipSetup = false, onProfileUpdated, shopName = "Coffee Shop" }) {
   const [preferences, setPreferences] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -116,6 +116,7 @@ export default function CustomerProfileView({ profile, compact, enableChipSetup 
         <AddOrderForm
           profile={profile}
           preferences={preferences}
+          shopName={shopName}
           onClose={() => setShowAddOrder(false)}
           onSaved={() => { loadData(); setShowAddOrder(false); }}
         />

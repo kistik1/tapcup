@@ -17,6 +17,22 @@
     "phone": {
       "type": "string"
     },
+    "login_username": {
+      "type": "string",
+      "description": "Shop login username issued by admin"
+    },
+    "login_password": {
+      "type": "string",
+      "description": "Shop login password issued by admin"
+    },
+    "credentials_updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "username_updated_by_role": {
+      "type": "string",
+      "description": "Role that last changed the shop username"
+    },
     "notes": {
       "type": "string"
     }

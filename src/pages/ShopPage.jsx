@@ -1,36 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Link2, Search, KeyRound, Phone } from "lucide-react";
+import { ArrowLeft, Link2, Search, KeyRound, Phone, Settings } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
 import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
-import PasswordGate from "@/components/shared/PasswordGate";
+import ShopLoginGate from "@/components/shop/ShopLoginGate";
 import { getSavedPersonalId, setCachedRoleContext, setSavedPersonalId } from "@/lib/personal-id";
-
-const SHOP_SESSION_KEY = "tapcup_shop_unlocked";
-const SHOP_PASSWORD = import.meta.env.VITE_TAPCUP_SHOP_PASSWORD;
+import { isSimulatorMode } from "@/lib/simulator/runtime";
 
 export default function ShopPage() {
   return (
-    <PasswordGate
-      title="Shop Access"
-      description="Enter the TapCup shop password to resolve customers and log orders."
-      password={SHOP_PASSWORD}
-      sessionKey={SHOP_SESSION_KEY}
-    >
-      <ShopExperience />
-    </PasswordGate>
+    <ShopLoginGate>
+      {({ shop, onShopUpdated, onSignOut }) => (
+        <ShopExperience shop={shop} onShopUpdated={onShopUpdated} onSignOut={onSignOut} />
+      )}
+    </ShopLoginGate>
   );
 }
 
-function ShopExperience() {
+function ShopExperience({ shop, onShopUpdated, onSignOut }) {
   const [searchParams] = useSearchParams();
   const personalId = searchParams.get("personal_id");
   const [manualInput, setManualInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
+  const [usernameInput, setUsernameInput] = useState(shop?.login_username || "");
+  const [usernameSaving, setUsernameSaving] = useState(false);
+  const [usernameMessage, setUsernameMessage] = useState("");
   const [resolving, setResolving] = useState(false);
   const [scanVisible, setScanVisible] = useState(false);
   const [scanMessage, setScanMessage] = useState("");
@@ -124,6 +122,53 @@ function ShopExperience() {
     }
   }
 
+  async function createAuditLog(action, entityType, entityId, details = {}) {
+    if (!base44.entities.AdminAuditLog) return;
+    await base44.entities.AdminAuditLog.create({
+      actor_role: "shop",
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      details,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  async function handleUsernameUpdate(event) {
+    event.preventDefault();
+    const nextUsername = usernameInput.trim();
+    if (!nextUsername || nextUsername === shop.login_username) return;
+
+    setUsernameSaving(true);
+    setUsernameMessage("");
+    setError("");
+
+    try {
+      const duplicates = await base44.entities.Shop.filter({ login_username: nextUsername });
+      const duplicate = duplicates.find((record) => record.id !== shop.id && record.status !== "inactive");
+      if (duplicate) {
+        setError("That username is already used by another shop.");
+        return;
+      }
+
+      const updatedShop = await base44.entities.Shop.update(shop.id, {
+        login_username: nextUsername,
+        credentials_updated_at: new Date().toISOString(),
+        username_updated_by_role: "shop",
+      });
+      await createAuditLog("shop_update_username", "Shop", shop.id, {
+        previous_username: shop.login_username,
+        next_username: nextUsername,
+      });
+      onShopUpdated(updatedShop);
+      setUsernameMessage("Username updated.");
+    } catch (err) {
+      setError(err?.message || "Unable to update username.");
+    } finally {
+      setUsernameSaving(false);
+    }
+  }
+
   function closeScanOverlay() {
     clearResolveTimer();
     setScanVisible(false);
@@ -182,10 +227,18 @@ function ShopExperience() {
         <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <Link2 className="w-5 h-5 text-primary" />
-          <span className="font-semibold">Coffee Shop</span>
+          <div className="min-w-0">
+            <span className="font-semibold block truncate">{shop?.name || "Coffee Shop"}</span>
+            {shop?.login_username && (
+              <span className="text-xs text-muted-foreground block truncate">@{shop.login_username}</span>
+            )}
+          </div>
         </div>
+        <Button type="button" variant="outline" onClick={onSignOut} className="ml-auto h-9 rounded-xl px-3 text-xs">
+          Sign Out
+        </Button>
       </div>
 
       <AnimatePresence mode="wait">
@@ -243,6 +296,36 @@ function ShopExperience() {
 
             {/* Sidebar: Manual Entry */}
             <div className="md:w-80 border-t md:border-t-0 md:border-l border-border bg-muted/30 p-6 flex flex-col justify-center gap-6">
+              {!isSimulatorMode && (
+                <form onSubmit={handleUsernameUpdate} className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Settings className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Shop Username</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Input
+                      value={usernameInput}
+                      onChange={(event) => {
+                        setUsernameInput(event.target.value);
+                        setUsernameMessage("");
+                      }}
+                      placeholder="Username"
+                      className="h-10 rounded-xl text-sm"
+                      autoComplete="username"
+                    />
+                    <Button
+                      type="submit"
+                      disabled={usernameSaving || !usernameInput.trim() || usernameInput.trim() === shop?.login_username}
+                      variant="outline"
+                      className="h-10 rounded-xl"
+                    >
+                      {usernameSaving ? "Saving..." : "Update Username"}
+                    </Button>
+                  </div>
+                  {usernameMessage && <p className="text-xs text-emerald-700 mt-2">{usernameMessage}</p>}
+                </form>
+              )}
+
               {/* NFC ID lookup */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
@@ -325,6 +408,7 @@ function ShopExperience() {
             <CustomerProfileView
               profile={customer}
               enableChipSetup
+              shopName={shop?.name || "Coffee Shop"}
               onProfileUpdated={(updatedProfile) => setCustomer(updatedProfile)}
             />
           </motion.div>
