@@ -36,10 +36,10 @@ export async function runScenario(testInfo, page, name, execute) {
   async function writeArtifacts() {
     const jsonPath = path.join(OUTPUT_DIR, `${slug}.json`);
     const logPath = path.join(OUTPUT_DIR, `${slug}.log`);
-    await fs.writeFile(jsonPath, JSON.stringify(report, null, 2));
-    await fs.writeFile(logPath, `${logLines.join('\n')}\n`);
     report.artifacts.json = jsonPath;
     report.artifacts.log = logPath;
+    await fs.writeFile(jsonPath, JSON.stringify(report, null, 2));
+    await fs.writeFile(logPath, `${logLines.join('\n')}\n`);
   }
 
   async function step(stepName, expected, action) {

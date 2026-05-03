@@ -15,6 +15,8 @@ export default function NfcScanOverlay({ visible, onCancel, message }) {
           {/* Cancel button */}
           <button
             onClick={onCancel}
+            aria-label="Close NFC scan overlay"
+            data-testid="nfc-scan-close"
             className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors"
           >
             <X className="w-6 h-6" />

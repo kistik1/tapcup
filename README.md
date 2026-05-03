@@ -16,6 +16,8 @@ Run the browser simulator with:
 npm run sim:test
 ```
 
+Each simulator run prints a concise pass/fail summary after the Playwright output.
+
 Run a narrower scenario set:
 
 ```bash
@@ -24,6 +26,12 @@ npm run sim:shop
 ```
 
 Simulator artifacts are written to `simulator-artifacts/` and include JSON step logs, plain-text logs, screenshots, and Playwright traces on failure.
+
+To inspect the detailed artifact report after a run, use:
+
+```bash
+npm run sim:report
+```
 
 **Edit the code in your local development environment**
 

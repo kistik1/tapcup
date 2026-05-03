@@ -164,4 +164,60 @@ test.describe('TapCup simulator', () => {
       });
     });
   });
+
+  test('shop: tap NFC without saved chip id keeps the scan overlay open until closed', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'shop tap nfc without saved chip id keeps the scan overlay open', async ({ step }) => {
+      await step('Open shop page', 'Shop scan view should render', async () => {
+        await page.goto('/shop');
+        await expect(page.getByTestId('shop-tap-nfc')).toBeVisible();
+        return 'Shop scan view loaded';
+      });
+
+      await step('Tap NFC without saved id', 'The scan overlay should stay visible and explain that no chip is saved yet', async () => {
+        await page.getByTestId('shop-tap-nfc').click();
+        await expect(page.getByText('Ready to Scan')).toBeVisible();
+        await expect(page.getByText('Waiting for NFC scan...')).toBeVisible();
+        await expect(page.getByText(/No saved chip ID yet/i)).toBeVisible();
+        return 'Overlay stayed open with the no-saved-chip message';
+      });
+
+      await step('Close scan overlay', 'The X button should close the scan overlay and return to the shop screen', async () => {
+        await page.getByTestId('nfc-scan-close').click();
+        await expect(page.getByText('Ready to Scan')).toHaveCount(0);
+        await expect(page.getByTestId('shop-tap-nfc')).toBeVisible();
+        return 'Overlay closed and shop view returned';
+      });
+    });
+  });
+
+  test('shop: log order from the customer profile', async ({ page }, testInfo) => {
+    await seedSavedPersonalId(page, SIMULATOR_PRIMARY_PROFILE.nfc_id);
+
+    await runScenario(testInfo, page, 'shop log order from customer profile', async ({ step }) => {
+      await step('Open shop page', 'Shop scan view should render', async () => {
+        await page.goto('/shop');
+        await expect(page.getByTestId('shop-tap-nfc')).toBeVisible();
+        return 'Shop scan view loaded';
+      });
+
+      await step('Open customer profile', 'The seeded chip should open the customer profile', async () => {
+        await page.getByTestId('shop-tap-nfc').click();
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        await expect(page.getByText(SIMULATOR_PRIMARY_PREFERENCE.name)).toBeVisible();
+        return `Opened shop profile for ${SIMULATOR_PRIMARY_PROFILE.display_name}`;
+      });
+
+      await step('Log order', 'The shop should be able to add a completed order for the customer', async () => {
+        await page.getByRole('button', { name: /^Order$/ }).click();
+        await expect(page.getByRole('heading', { name: /Add Order/i })).toBeVisible();
+        await page.getByPlaceholder('e.g. Extra shot added').fill('Extra hot, oat milk');
+        await page.getByPlaceholder('4.50').fill('5.25');
+        await page.getByRole('button', { name: /Log Order/i }).click();
+        await page.getByRole('button', { name: /History/i }).click();
+        await expect(page.getByText('Extra hot, oat milk')).toBeVisible();
+        await expect(page.getByText('$5.25')).toBeVisible();
+        return 'Logged an order and verified it in order history';
+      });
+    });
+  });
 });

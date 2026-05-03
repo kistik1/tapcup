@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -44,7 +44,56 @@ async function showReportSummary() {
   }
 }
 
-function runPlaywright() {
+async function showRunSummary() {
+  if (!existsSync(artifactDir)) {
+    console.log('No simulator artifacts found.');
+    return;
+  }
+
+  const files = (await readdir(artifactDir)).filter((file) => file.endsWith('.json') && file !== 'playwright-report.json');
+  if (files.length === 0) {
+    console.log(`No JSON simulator reports found in ${artifactDir}`);
+    return;
+  }
+
+  const reports = [];
+  let passed = 0;
+  let failed = 0;
+
+  for (const file of files.sort()) {
+    const content = JSON.parse(await readFile(path.join(artifactDir, file), 'utf8'));
+    reports.push({
+      name: content.name,
+      status: content.status,
+      json: content.artifacts?.json,
+      log: content.artifacts?.log,
+      screenshot: content.artifacts?.screenshot,
+    });
+    if (content.status === 'passed') passed += 1;
+    else failed += 1;
+  }
+
+  console.log(`Simulator summary: ${passed} passed, ${failed} failed, ${reports.length} total`);
+  for (const report of reports) {
+    console.log(`${report.status.toUpperCase()} ${report.name}`);
+    if (report.json) console.log(`  json: ${report.json}`);
+    if (report.log) console.log(`  log: ${report.log}`);
+    if (report.screenshot) console.log(`  screenshot: ${report.screenshot}`);
+  }
+}
+
+async function clearScenarioArtifacts() {
+  if (!existsSync(artifactDir)) return;
+  const files = await readdir(artifactDir);
+  await Promise.all(
+    files
+      .filter((file) => file !== 'playwright-report.json' && (file.endsWith('.json') || file.endsWith('.log') || file.endsWith('.png')))
+      .map((file) => unlink(path.join(artifactDir, file)).catch(() => {}))
+  );
+}
+
+async function runPlaywright() {
+  await clearScenarioArtifacts();
   const playwrightArgs = ['test', '-c', 'playwright.simulator.config.js'];
   if (mode !== 'all') {
     playwrightArgs.push('--grep', mode);
@@ -68,5 +117,6 @@ function runPlaywright() {
 if (reportOnly) {
   await showReportSummary();
 } else {
-  runPlaywright();
+  await runPlaywright();
+  await showRunSummary();
 }
