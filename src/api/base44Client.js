@@ -1,10 +1,11 @@
 import { createClient } from '@base44/sdk';
 import { appParams } from '@/lib/app-params';
+import { isSimulatorMode } from '@/lib/simulator/runtime';
+import { createSimulatorBase44 } from '@/lib/simulator/mock-base44';
 
 const { appId, token, functionsVersion, appBaseUrl } = appParams;
 
-//Create a client with authentication required
-export const base44 = createClient({
+const createRealClient = () => createClient({
   appId,
   token,
   functionsVersion,
@@ -12,3 +13,5 @@ export const base44 = createClient({
   requiresAuth: false,
   appBaseUrl
 });
+
+export const base44 = isSimulatorMode ? createSimulatorBase44() : createRealClient();

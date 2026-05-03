@@ -9,7 +9,11 @@
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sim:test": "node tests/simulator/run-simulator.mjs",
+    "sim:consumer": "node tests/simulator/run-simulator.mjs consumer",
+    "sim:shop": "node tests/simulator/run-simulator.mjs shop",
+    "sim:report": "node tests/simulator/run-simulator.mjs --report"
   },
   "dependencies": {
     "@base44/sdk": "^0.8.27",
@@ -46,6 +50,7 @@
     "@stripe/react-stripe-js": "^3.0.0",
     "@stripe/stripe-js": "^5.2.0",
     "@tanstack/react-query": "^5.84.1",
+    "@playwright/test": "^1.55.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

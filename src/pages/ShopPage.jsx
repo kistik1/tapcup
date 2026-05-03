@@ -56,11 +56,6 @@ export default function ShopPage() {
   }
 
   async function resolveChipLink() {
-    const q = manualInput.trim() || getSavedPersonalId();
-    if (!q) {
-      setError("Enter an NFC ID first.");
-      return;
-    }
     clearResolveTimer();
     setResolving(true);
     setError("");
@@ -68,7 +63,13 @@ export default function ShopPage() {
     setScanVisible(true);
     resolveTimerRef.current = window.setTimeout(async () => {
       try {
-        const result = await lookupByNfcId(q);
+        const savedPersonalId = getSavedPersonalId();
+        if (!savedPersonalId) {
+          setScanMessage("No saved chip ID yet. Tap X to close or use manual NFC ID/phone.");
+          return;
+        }
+
+        const result = await lookupByNfcId(savedPersonalId);
         if (result) {
           setScanMessage("NFC detected. Opening customer profile...");
           setScanVisible(false);
@@ -97,8 +98,11 @@ export default function ShopPage() {
     const q = phoneInput.trim();
     if (!q) return;
     setPhoneSearching(true);
-    await lookupByPhone(q);
-    setPhoneSearching(false);
+    try {
+      await lookupByPhone(q);
+    } finally {
+      setPhoneSearching(false);
+    }
   }
 
   function closeScanOverlay() {
@@ -146,6 +150,7 @@ export default function ShopPage() {
               <motion.button
                 onClick={resolveChipLink}
                 disabled={resolving}
+                data-testid="shop-tap-nfc"
                 whileTap={{ scale: 0.97 }}
                 className={`relative flex flex-col items-center justify-center gap-6 w-64 h-64 rounded-full border-4 transition-all shadow-xl cursor-pointer select-none
                   ${resolving
@@ -165,10 +170,10 @@ export default function ShopPage() {
                 </div>
                 <div className="text-center px-4">
                   <p className="font-bold text-lg leading-tight">
-                    {resolving ? "Resolving..." : "Tap to Resolve"}
+                    {resolving ? "Redirecting..." : "Tap NFC"}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {resolving ? "Opening the chip-linked customer record" : "Use the stored personal ID or enter it below"}
+                    {resolving ? "Opening the chip-linked customer record" : "Use the stored personal ID"}
                   </p>
                 </div>
               </motion.button>

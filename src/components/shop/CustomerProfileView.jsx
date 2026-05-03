@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { motion, AnimatePresence } from "framer-motion";
-import { Star, Plus, Clock } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PreferenceCard from "@/components/consumer/PreferenceCard";
 import OrderHistoryList from "@/components/shared/OrderHistoryList";

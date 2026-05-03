@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { motion } from "framer-motion";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Plus, Star, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -170,6 +169,8 @@ export default function ConsumerPage() {
         </div>
         <button
           onClick={handleSignOut}
+          data-testid="consumer-sign-out"
+          aria-label="Sign out"
           className="text-muted-foreground hover:text-destructive transition-colors p-1"
           title="יציאה"
         >

@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import { isSimulatorMode } from '@/lib/simulator/runtime';
 
 const AuthContext = createContext();
 
@@ -15,8 +16,30 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
+    if (isSimulatorMode) {
+      bootstrapSimulatorState();
+      return;
+    }
+
     checkAppState();
   }, []);
+
+  const bootstrapSimulatorState = async () => {
+    try {
+      setIsLoadingPublicSettings(true);
+      setIsLoadingAuth(true);
+      setAuthError(null);
+
+      const currentUser = await base44.auth.me().catch(() => null);
+      setAppPublicSettings({ id: 'simulator', public_settings: {} });
+      setUser(currentUser);
+      setIsAuthenticated(Boolean(currentUser));
+      setAuthChecked(true);
+    } finally {
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+    }
+  };
 
   const checkAppState = async () => {
     try {

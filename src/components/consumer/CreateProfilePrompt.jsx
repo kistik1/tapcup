@@ -68,8 +68,9 @@ export default function CreateProfilePrompt({
 
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Name</label>
+            <label htmlFor="create-profile-name" className="text-sm font-medium">Name</label>
             <Input
+              id="create-profile-name"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Your name"
@@ -79,8 +80,9 @@ export default function CreateProfilePrompt({
           </div>
 
           <div>
-            <label className="text-sm font-medium">Phone</label>
+            <label htmlFor="create-profile-phone" className="text-sm font-medium">Phone</label>
             <Input
+              id="create-profile-phone"
               value={phone}
               onChange={e => setPhone(e.target.value)}
               placeholder="+1 555 000 0000"
@@ -89,10 +91,12 @@ export default function CreateProfilePrompt({
           </div>
 
           <div>
-            <label className="text-sm font-medium">Personal ID</label>
+            <label htmlFor="create-profile-nfc-id" className="text-sm font-medium">Personal ID</label>
             <Input
+              id="create-profile-nfc-id"
               value={nfcId}
               onChange={e => setNfcId(e.target.value)}
+              placeholder="Personal ID"
               className="mt-1 h-11 rounded-xl font-mono text-sm"
             />
           </div>

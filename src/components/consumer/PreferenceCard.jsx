@@ -1,4 +1,4 @@
-import { Star, Edit2, Trash2, Check } from "lucide-react";
+import { Star, Edit2, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const VESSEL_EMOJI = { mug: "🫖", glass: "🥛", ta: "📄" };

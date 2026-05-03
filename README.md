@@ -8,6 +8,23 @@ This project contains everything you need to run your app locally.
 
 TapCup uses a URL-driven chip identity flow in production: the chip stores a unique ID, and the app resolves that ID into a consumer profile via `/consumer?personal_id=...`. Browser NFC scanning is treated as optional, not required.
 
+### Simulator
+
+Run the browser simulator with:
+
+```bash
+npm run sim:test
+```
+
+Run a narrower scenario set:
+
+```bash
+npm run sim:consumer
+npm run sim:shop
+```
+
+Simulator artifacts are written to `simulator-artifacts/` and include JSON step logs, plain-text logs, screenshots, and Playwright traces on failure.
+
 **Edit the code in your local development environment**
 
 Any change pushed to the repo will also be reflected in the Base44 Builder.

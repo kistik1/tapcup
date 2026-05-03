@@ -129,6 +129,7 @@ export default function IdentifyScreen({ onIdentified }) {
         <motion.button
           onClick={openSavedChip}
           disabled={nfcLoading}
+          data-testid="consumer-tap-nfc"
           whileTap={{ scale: 0.97 }}
           className={`relative w-full flex flex-col items-center justify-center gap-4 py-10 rounded-2xl border-2 transition-all cursor-pointer select-none
             ${nfcLoading
