@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Coffee, Phone, Search, KeyRound } from "lucide-react";
@@ -19,6 +19,14 @@ export default function IdentifyScreen({ onIdentified }) {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const [createSeed, setCreateSeed] = useState(null);
+  const scanTimerRef = useRef(null);
+
+  function clearScanTimer() {
+    if (scanTimerRef.current) {
+      window.clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+  }
 
   async function lookupByPhone(phone) {
     setError("");
@@ -55,24 +63,21 @@ export default function IdentifyScreen({ onIdentified }) {
 
   async function openSavedChip() {
     setError("");
-    setScanMessage("Checking your saved personal ID...");
+    clearScanTimer();
+    setScanMessage("Waiting for NFC scan...");
     setScanVisible(true);
     setNfcLoading(true);
 
-    window.setTimeout(() => {
+    scanTimerRef.current = window.setTimeout(() => {
       const savedPersonalId = getSavedPersonalId();
       if (!savedPersonalId) {
-        setScanMessage("No saved chip ID yet. Use phone number or manual NFC ID below.");
-        setNfcLoading(false);
-        window.setTimeout(() => {
-          setScanVisible(false);
-          setScanMessage("");
-        }, 1200);
+        setScanMessage("No saved chip ID yet. Tap X to exit or use phone/manual NFC ID below.");
         return;
       }
 
+      setScanMessage("NFC detected. Redirecting...");
       navigate(`/consumer?personal_id=${encodeURIComponent(savedPersonalId)}`, { replace: true });
-    }, 650);
+    }, 1500);
   }
 
   async function handleManualNfc() {
@@ -86,15 +91,24 @@ export default function IdentifyScreen({ onIdentified }) {
     }
   }
 
+  function closeScanOverlay() {
+    clearScanTimer();
+    setScanVisible(false);
+    setScanMessage("");
+    setNfcLoading(false);
+  }
+
+  useEffect(() => {
+    return () => {
+      clearScanTimer();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
       <NfcScanOverlay
         visible={scanVisible}
-        onCancel={() => {
-          setScanVisible(false);
-          setScanMessage("");
-          setNfcLoading(false);
-        }}
+        onCancel={closeScanOverlay}
         message={scanMessage || "Hold the NFC keychain near the top of your device"}
       />
 
