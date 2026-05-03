@@ -9,7 +9,7 @@ import PreferenceForm from "@/components/consumer/PreferenceForm";
 import OrderHistoryList from "@/components/shared/OrderHistoryList";
 import LoadingOverlay from "@/components/shared/LoadingOverlay";
 import CreateProfilePrompt from "@/components/consumer/CreateProfilePrompt";
-import { setSavedPersonalId } from "@/lib/personal-id";
+import { setCachedRoleContext, setSavedPersonalId } from "@/lib/personal-id";
 
 export default function ConsumerPage() {
   const navigate = useNavigate();
@@ -25,13 +25,17 @@ export default function ConsumerPage() {
   const [editingPref, setEditingPref] = useState(null);
   const [tab, setTab] = useState("prefs"); // prefs | history
 
+  useEffect(() => {
+    setCachedRoleContext("consumer", "/consumer");
+  }, []);
+
   async function loadProfileData(p) {
     setLoading(true);
     try {
       const prefs = await base44.entities.CoffeePreference.filter({ profile_id: p.id });
       setPreferences(prefs);
       const ords = await base44.entities.Order.filter({ profile_id: p.id });
-      setOrders(ords.sort((a, b) => new Date(b.ordered_at || b.created_date) - new Date(a.ordered_at || a.created_date)));
+      setOrders(ords.sort((a, b) => new Date(b.ordered_at || b.created_date).getTime() - new Date(a.ordered_at || a.created_date).getTime()));
     } finally {
       setLoading(false);
     }
@@ -164,8 +168,8 @@ export default function ConsumerPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="text-center">
-          <p className="font-semibold text-sm">{profile.display_name}</p>
-          <p className="text-xs text-muted-foreground font-mono">NFC: {profile.nfc_id}</p>
+          <p data-testid="consumer-profile-display-name" className="font-semibold text-sm">{profile.display_name}</p>
+          <p data-testid="consumer-profile-nfc-id" className="text-xs text-muted-foreground font-mono">NFC: {profile.nfc_id}</p>
         </div>
         <button
           onClick={handleSignOut}

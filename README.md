@@ -6,7 +6,7 @@ View and Edit  your app on [Base44.com](http://Base44.com)
 
 This project contains everything you need to run your app locally.
 
-TapCup uses a URL-driven chip identity flow in production: the chip stores a unique ID, and the app resolves that ID into a consumer profile via `/consumer?personal_id=...`. Browser NFC scanning is treated as optional, not required.
+TapCup uses a URL-driven chip identity flow in production: the chip stores a canonical TapCup URL such as `https://tap-cup.base44.app/consumer?personal_id=...`, and the app resolves that URL into a consumer profile. Browser NFC scanning is treated as optional, not required.
 
 App URL: https://tap-cup.base44.app/
 
@@ -30,14 +30,17 @@ npm run sim:shop
 
 Simulator artifacts are written to `simulator-artifacts/` and include JSON step logs, plain-text logs, screenshots, and Playwright traces on failure.
 
-To simulate a consumer chip scan from the simulator, pass a chip ID flag:
+To simulate a chip scan from the simulator, pass a canonical chip URL and choose the side:
 
 ```bash
-npm run sim:nfc -- --chip-id SIM-111111
-npm run sim:test -- --consumer-chip-id SIM-111111
+npm run sim:nfc -- --chip-url "https://tap-cup.base44.app/consumer?personal_id=NFC-AJV32A" --side consumer
+npm run sim:nfc -- --chip-url "https://tap-cup.base44.app/consumer?personal_id=NFC-AJV32A" --side shop
+npm run sim:test -- --chip-url "https://tap-cup.base44.app/consumer?personal_id=NFC-AJV32A"
 ```
 
-`sim:nfc -- --chip-id ...` runs only the NFC redirect test, preloads the simulator NFC panel with the consumer chip ID, and routes the scan into `/consumer?personal_id=...`.
+`sim:nfc -- --chip-url ...` runs only the NFC redirect test. The simulator parses `personal_id` from the canonical chip URL, clears cached scan state before the run, and then executes the consumer or shop side you selected with `--side`.
+
+`--chip-id` and `--consumer-chip-id` are still accepted as legacy aliases, but the preferred input is now the full canonical chip URL saved on the NFC chip.
 
 To inspect the detailed artifact report after a run, use:
 

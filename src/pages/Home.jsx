@@ -1,10 +1,21 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Coffee, Wifi } from "lucide-react";
+import { Coffee, Shield, Wifi } from "lucide-react";
+import { getCachedRoleContext, getRouteForPersonalId, setSavedPersonalId } from "@/lib/personal-id";
 
 export default function Home() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [hovered, setHovered] = useState(null);
+  const personalId = searchParams.get("personal_id");
+
+  useEffect(() => {
+    if (!personalId) return;
+    setSavedPersonalId(personalId);
+    const { role } = getCachedRoleContext();
+    navigate(getRouteForPersonalId(personalId, role), { replace: true });
+  }, [navigate, personalId]);
 
   const roles = [
     {
@@ -28,6 +39,17 @@ export default function Home() {
       textColor: "text-stone-50",
       bg: "bg-stone-900/10 hover:bg-stone-900/20",
       border: "border-stone-300 hover:border-stone-500",
+    },
+    {
+      id: "admin",
+      icon: Shield,
+      label: "Admin",
+      sub: "Manage chips, shops & stats",
+      href: "/admin",
+      color: "from-slate-800 to-slate-600",
+      textColor: "text-slate-50",
+      bg: "bg-slate-900/10 hover:bg-slate-900/20",
+      border: "border-slate-300 hover:border-slate-500",
     },
   ];
 

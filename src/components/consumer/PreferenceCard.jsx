@@ -54,14 +54,20 @@ export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, 
           {pref.notes && (
             <p className="text-sm text-muted-foreground italic mb-3">"{pref.notes}"</p>
           )}
-          <div className="flex gap-2">
-            <button onClick={onEdit} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors">
-              <Edit2 className="w-3 h-3" /> Edit
-            </button>
-            <button onClick={onDelete} className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
-              <Trash2 className="w-3 h-3" /> Remove
-            </button>
-          </div>
+          {(onEdit || onDelete) && (
+            <div className="flex gap-2">
+              {onEdit && (
+                <button onClick={onEdit} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors">
+                  <Edit2 className="w-3 h-3" /> Edit
+                </button>
+              )}
+              {onDelete && (
+                <button onClick={onDelete} className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
+                  <Trash2 className="w-3 h-3" /> Remove
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </motion.div>
     );
@@ -93,17 +99,25 @@ export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, 
         )}
       </div>
 
-      <div className="flex flex-col gap-1 pr-3">
-        <button onClick={onEdit} className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition-colors">
-          <Edit2 className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={onSetDefault} className="text-amber-500 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title="Set as default">
-          <Star className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={onDelete} className="text-destructive/50 hover:text-destructive p-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
+      {(onEdit || onSetDefault || onDelete) && (
+        <div className="flex flex-col gap-1 pr-3">
+          {onEdit && (
+            <button onClick={onEdit} className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition-colors">
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onSetDefault && (
+            <button onClick={onSetDefault} className="text-amber-500 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-colors" title="Set as default">
+              <Star className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={onDelete} className="text-destructive/50 hover:text-destructive p-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }

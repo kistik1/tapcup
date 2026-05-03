@@ -1,0 +1,26 @@
+{
+  "name": "AdminAuditLog",
+  "type": "object",
+  "properties": {
+    "actor_role": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string"
+    },
+    "entity_type": {
+      "type": "string"
+    },
+    "entity_id": {
+      "type": "string"
+    },
+    "details": {
+      "type": "object"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["actor_role", "action", "entity_type", "created_at"]
+}

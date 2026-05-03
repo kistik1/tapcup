@@ -6,7 +6,8 @@ import { spawnSync } from 'node:child_process';
 const args = process.argv.slice(2);
 let mode = 'all';
 let reportOnly = false;
-let consumerChipId = '';
+let chipUrl = '';
+let side = '';
 const artifactDir = path.resolve(process.cwd(), 'simulator-artifacts');
 const playwrightBin = process.platform === 'win32' ? 'playwright.cmd' : 'playwright';
 const playwrightPath = path.resolve(process.cwd(), 'node_modules', '.bin', playwrightBin);
@@ -19,20 +20,36 @@ for (let i = 0; i < args.length; i += 1) {
     reportOnly = true;
     continue;
   }
-  if (arg === '--consumer-chip-id' || arg === '--chip-id') {
+  if (arg === '--consumer-chip-id' || arg === '--chip-id' || arg === '--chip-url') {
     const next = args[i + 1];
     if (next && !next.startsWith('-')) {
-      consumerChipId = next;
+      chipUrl = next;
       i += 1;
     }
     continue;
   }
   if (arg.startsWith('--consumer-chip-id=')) {
-    consumerChipId = arg.split('=')[1] || '';
+    chipUrl = arg.split('=')[1] || '';
     continue;
   }
   if (arg.startsWith('--chip-id=')) {
-    consumerChipId = arg.split('=')[1] || '';
+    chipUrl = arg.split('=')[1] || '';
+    continue;
+  }
+  if (arg.startsWith('--chip-url=')) {
+    chipUrl = arg.split('=')[1] || '';
+    continue;
+  }
+  if (arg === '--side') {
+    const next = args[i + 1];
+    if (next && !next.startsWith('-')) {
+      side = next;
+      i += 1;
+    }
+    continue;
+  }
+  if (arg.startsWith('--side=')) {
+    side = arg.split('=')[1] || '';
     continue;
   }
   if (!arg.startsWith('-') && mode === 'all') {
@@ -40,8 +57,12 @@ for (let i = 0; i < args.length; i += 1) {
   }
 }
 
-if (consumerChipId) {
-  process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID = consumerChipId;
+if (chipUrl) {
+  process.env.VITE_TAPCUP_SIMULATOR_CHIP_URL = chipUrl;
+  process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID = chipUrl;
+}
+if (side) {
+  process.env.VITE_TAPCUP_SIMULATOR_SIDE = side;
 }
 
 async function showReportSummary() {
@@ -141,7 +162,7 @@ async function runPlaywright() {
   await clearScenarioArtifacts();
   const playwrightArgs = ['test', '-c', 'playwright.simulator.config.js'];
   if (mode === 'nfc') {
-    playwrightArgs.push('--grep', 'chip id flag');
+    playwrightArgs.push('--grep', 'canonical chip url flag');
   }
   if (mode !== 'all') {
     if (mode !== 'nfc') {

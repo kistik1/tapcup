@@ -3,12 +3,20 @@ import {
   SIMULATOR_PRIMARY_PREFERENCE,
   SIMULATOR_PRIMARY_PROFILE,
 } from '../../src/lib/simulator/fixtures.js';
+import { normalizeSimulatorChipPayload } from '../../src/lib/simulator/chip-url.js';
 import { runScenario } from './lib/scenario-runner.mjs';
 
 const PERSONAL_ID_STORAGE_KEY = 'tapcup_last_personal_id';
 const UNKNOWN_PERSONAL_ID = 'SIM-NEW-0001';
 const NFC_SCAN_DELAY_MS = 20000;
-const SIMULATOR_CONSUMER_CHIP_ID = process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID?.trim() || '';
+const SIMULATOR_SIDE = process.env.VITE_TAPCUP_SIMULATOR_SIDE?.trim() || 'consumer';
+const SIMULATOR_CHIP_PAYLOAD = normalizeSimulatorChipPayload(
+  process.env.VITE_TAPCUP_SIMULATOR_CHIP_URL?.trim()
+  || process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID?.trim()
+  || `https://tap-cup.base44.app/consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`
+);
+const SIMULATOR_CHIP_URL = SIMULATOR_CHIP_PAYLOAD.canonicalUrl;
+const SIMULATOR_CHIP_PERSONAL_ID = SIMULATOR_CHIP_PAYLOAD.personalId;
 
 async function seedSavedPersonalId(page, personalId) {
   await page.addInitScript(
@@ -61,7 +69,7 @@ test.describe('TapCup simulator', () => {
         await page.getByPlaceholder('+972 50 000 0000').fill(SIMULATOR_PRIMARY_PROFILE.phone);
         await page.getByRole('button', { name: /Sign In/i }).click();
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
-        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.nfc_id)).toBeVisible();
+        await expect(page.getByTestId('consumer-profile-nfc-id')).toHaveText(`NFC: ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
         return `Loaded ${SIMULATOR_PRIMARY_PROFILE.display_name} from phone ${SIMULATOR_PRIMARY_PROFILE.phone}`;
       });
     });
@@ -79,7 +87,7 @@ test.describe('TapCup simulator', () => {
         await page.getByPlaceholder('Personal ID').first().fill(SIMULATOR_PRIMARY_PROFILE.nfc_id);
         await page.getByRole('button', { name: /Search by NFC ID/i }).click();
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
-        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.nfc_id)).toBeVisible();
+        await expect(page.getByTestId('consumer-profile-nfc-id')).toHaveText(`NFC: ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
         return `Loaded ${SIMULATOR_PRIMARY_PROFILE.display_name} from NFC ID ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`;
       });
     });
@@ -141,8 +149,8 @@ test.describe('TapCup simulator', () => {
       });
 
       await step('Push chip read', 'The simulator should route the chip ID into the consumer flow', async () => {
-        await page.getByTestId('simulator-nfc-chip').fill(SIMULATOR_PRIMARY_PROFILE.nfc_id);
-        await page.getByTestId('simulator-nfc-target').selectOption('consumer');
+        await page.getByTestId('simulator-nfc-chip').fill(`https://tap-cup.base44.app/consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await page.getByTestId('simulator-nfc-side').selectOption('consumer');
         await page.getByTestId('simulator-nfc-run').click();
         await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`));
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
@@ -151,44 +159,68 @@ test.describe('TapCup simulator', () => {
     });
   });
 
-  test('simulator: consumer chip flag preloads the NFC panel', async ({ page }, testInfo) => {
-    test.skip(!SIMULATOR_CONSUMER_CHIP_ID, 'consumer chip flag not set');
+  test('simulator: chip url flag preloads the NFC panel', async ({ page }, testInfo) => {
+    test.skip(!process.env.VITE_TAPCUP_SIMULATOR_CHIP_URL?.trim() && !process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID?.trim(), 'chip url flag not set');
 
-    await runScenario(testInfo, page, 'simulator consumer chip flag preloads the nfc panel', async ({ step }) => {
-      await step('Open home page', 'Simulator panel should preload the consumer chip ID', async () => {
-        await page.goto('/');
+    await runScenario(testInfo, page, 'simulator chip url flag preloads the nfc panel', async ({ step }) => {
+      const isShopSide = SIMULATOR_SIDE === 'shop';
+
+      await step('Open home page', 'Simulator panel should preload the canonical chip URL', async () => {
+        await page.goto(isShopSide ? '/shop' : '/consumer');
         await expect(page.getByTestId('simulator-nfc-panel')).toBeVisible();
-        await expect(page.getByTestId('simulator-nfc-chip')).toHaveValue(SIMULATOR_CONSUMER_CHIP_ID);
+        await expect(page.getByTestId('simulator-nfc-chip')).toHaveValue(SIMULATOR_CHIP_URL);
+        await expect(page.getByTestId('simulator-nfc-personal-id')).toHaveText(SIMULATOR_CHIP_PERSONAL_ID);
         await expect(page.getByTestId('simulator-consumer-chip-flag')).toBeVisible();
-        return `Loaded consumer chip flag ${SIMULATOR_CONSUMER_CHIP_ID}`;
+        return `Loaded canonical chip URL ${SIMULATOR_CHIP_URL}`;
       });
 
-      await step('Simulate consumer chip scan', 'The panel should route the consumer chip into the consumer flow', async () => {
+      await step('Simulate consumer chip scan', isShopSide ? 'The panel should seed the shop flow from the canonical chip URL' : 'The panel should route the consumer chip into the consumer flow', async () => {
         await page.getByTestId('simulator-nfc-run').click();
-        await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_CONSUMER_CHIP_ID}`));
+        if (isShopSide) {
+          await expect(page).toHaveURL(/\/shop$/);
+          await page.getByTestId('shop-tap-nfc').click();
+          await page.waitForTimeout(NFC_SCAN_DELAY_MS + 500);
+          await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+          return `Seeded shop flow from ${SIMULATOR_CHIP_URL}`;
+        }
+
+        await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_CHIP_PERSONAL_ID}`));
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
-        return `Simulated consumer chip scan for ${SIMULATOR_CONSUMER_CHIP_ID}`;
+        return `Simulated consumer chip scan for ${SIMULATOR_CHIP_PERSONAL_ID}`;
       });
     });
   });
 
-  test('nfc: redirect only from chip id flag', async ({ page }, testInfo) => {
-    test.skip(!SIMULATOR_CONSUMER_CHIP_ID, 'chip id flag not set');
+  test('nfc: redirect only from canonical chip url flag', async ({ page }, testInfo) => {
+    test.skip(!process.env.VITE_TAPCUP_SIMULATOR_CHIP_URL?.trim() && !process.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID?.trim(), 'chip url flag not set');
 
-    await runScenario(testInfo, page, 'nfc redirect only from chip id flag', async ({ step }) => {
-      await step('Open consumer landing page', 'Simulator NFC panel should preload the chip ID', async () => {
-        await page.goto('/consumer');
+    await runScenario(testInfo, page, 'nfc redirect only from canonical chip url flag', async ({ step }) => {
+      const isShopSide = SIMULATOR_SIDE === 'shop';
+
+      await step('Open landing page', 'Simulator NFC panel should preload the canonical chip URL', async () => {
+        await page.goto(isShopSide ? '/shop' : '/consumer');
         await expect(page.getByTestId('simulator-nfc-panel')).toBeVisible();
-        await expect(page.getByTestId('simulator-nfc-chip')).toHaveValue(SIMULATOR_CONSUMER_CHIP_ID);
-        return `Loaded chip ID ${SIMULATOR_CONSUMER_CHIP_ID} into the NFC panel`;
+        await expect(page.getByTestId('simulator-nfc-chip')).toHaveValue(SIMULATOR_CHIP_URL);
+        await expect(page.getByTestId('simulator-nfc-personal-id')).toHaveText(SIMULATOR_CHIP_PERSONAL_ID);
+        return `Loaded chip URL ${SIMULATOR_CHIP_URL} into the NFC panel`;
       });
 
-      await step('Simulate NFC redirect', 'The chip should redirect directly to the consumer route', async () => {
+      await step('Simulate NFC redirect', isShopSide ? 'The chip should seed the shop flow from the canonical URL' : 'The chip should redirect directly to the consumer route', async () => {
         await page.getByTestId('simulator-nfc-run').click();
-        await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_CONSUMER_CHIP_ID}`));
+        if (isShopSide) {
+          await expect(page).toHaveURL(/\/shop$/);
+          await expect(page.getByTestId('simulator-nfc-personal-id')).toHaveText(SIMULATOR_CHIP_PERSONAL_ID);
+          await page.getByTestId('shop-tap-nfc').click();
+          await page.waitForTimeout(NFC_SCAN_DELAY_MS + 500);
+          await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+          await expect(page.getByText(SIMULATOR_PRIMARY_PREFERENCE.name)).toBeVisible();
+          return `Seeded shop flow from ${SIMULATOR_CHIP_URL}`;
+        }
+
+        await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_CHIP_PERSONAL_ID}`));
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
         await expect(page.getByText(SIMULATOR_PRIMARY_PREFERENCE.name)).toBeVisible();
-        return `Redirected to consumer profile for ${SIMULATOR_CONSUMER_CHIP_ID}`;
+        return `Redirected to consumer profile for ${SIMULATOR_CHIP_PERSONAL_ID}`;
       });
     });
   });
@@ -225,7 +257,7 @@ test.describe('TapCup simulator', () => {
         await page.getByPlaceholder('+1 555 000 0000').fill(SIMULATOR_PRIMARY_PROFILE.phone);
         await page.getByRole('button', { name: /Search by Phone/i }).click();
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
-        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.nfc_id)).toBeVisible();
+        await expect(page.getByTestId('shop-customer-nfc-id')).toHaveText(SIMULATOR_PRIMARY_PROFILE.nfc_id);
         return `Opened shop profile for ${SIMULATOR_PRIMARY_PROFILE.display_name} by phone`;
       });
     });

@@ -1,0 +1,29 @@
+{
+  "name": "StaffAccess",
+  "type": "object",
+  "properties": {
+    "display_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["shop", "admin"]
+    },
+    "shop_id": {
+      "type": "string"
+    },
+    "can_setup_chips": {
+      "type": "boolean",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive"],
+      "default": "active"
+    }
+  },
+  "required": ["display_name", "role", "status"]
+}

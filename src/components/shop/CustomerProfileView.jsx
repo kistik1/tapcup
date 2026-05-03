@@ -4,9 +4,10 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PreferenceCard from "@/components/consumer/PreferenceCard";
 import OrderHistoryList from "@/components/shared/OrderHistoryList";
+import ProfileChipSetup from "@/components/shared/ProfileChipSetup";
 import AddOrderForm from "./AddOrderForm";
 
-export default function CustomerProfileView({ profile, compact }) {
+export default function CustomerProfileView({ profile, compact, enableChipSetup = false, onProfileUpdated }) {
   const [preferences, setPreferences] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ export default function CustomerProfileView({ profile, compact }) {
     const prefs = await base44.entities.CoffeePreference.filter({ profile_id: profile.id });
     setPreferences(prefs);
     const ords = await base44.entities.Order.filter({ profile_id: profile.id });
-    setOrders(ords.sort((a, b) => new Date(b.ordered_at || b.created_date) - new Date(a.ordered_at || a.created_date)));
+    setOrders(ords.sort((a, b) => new Date(b.ordered_at || b.created_date).getTime() - new Date(a.ordered_at || a.created_date).getTime()));
     setLoading(false);
   }
 
@@ -41,9 +42,9 @@ export default function CustomerProfileView({ profile, compact }) {
           {profile.display_name?.[0]?.toUpperCase() || "?"}
         </div>
         <div className="flex-1">
-          <p className="font-bold text-lg leading-tight">{profile.display_name}</p>
+          <p data-testid="shop-customer-display-name" className="font-bold text-lg leading-tight">{profile.display_name}</p>
           {profile.phone && <p className="text-sm text-muted-foreground">{profile.phone}</p>}
-          <p className="text-xs font-mono text-muted-foreground/60">{profile.nfc_id}</p>
+          <p data-testid="shop-customer-nfc-id" className="text-xs font-mono text-muted-foreground/60">{profile.nfc_id}</p>
         </div>
         <Button
           onClick={() => setShowAddOrder(true)}
@@ -97,6 +98,18 @@ export default function CustomerProfileView({ profile, compact }) {
 
       {tab === "history" && (
         <OrderHistoryList orders={orders} preferences={preferences} />
+      )}
+
+      {enableChipSetup && (
+        <div className="mt-5">
+          <ProfileChipSetup
+            profile={profile}
+            actorRole="shop"
+            actorLabel="Shop Staff"
+            compact={compact}
+            onAssigned={onProfileUpdated}
+          />
+        </div>
       )}
 
       {showAddOrder && (

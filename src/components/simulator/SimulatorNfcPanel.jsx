@@ -4,39 +4,47 @@ import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSavedPersonalId, setSavedPersonalId } from "@/lib/personal-id";
+import { clearSimulatorBrowserState, getSimulatorConsumerRoute, normalizeSimulatorChipPayload } from "@/lib/simulator/chip-url";
 import { isSimulatorMode } from "@/lib/simulator/runtime";
 
 export default function SimulatorNfcPanel() {
   const navigate = useNavigate();
-  const consumerChipFlag = import.meta.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID?.trim() || "";
-  const [chipId, setChipId] = useState(() => consumerChipFlag || getSavedPersonalId() || "");
-  const [target, setTarget] = useState("consumer");
+  const chipUrlFlag =
+    import.meta.env.VITE_TAPCUP_SIMULATOR_CHIP_URL?.trim()
+    || import.meta.env.VITE_TAPCUP_SIMULATOR_CONSUMER_CHIP_ID?.trim()
+    || "";
+  const sideFlag = import.meta.env.VITE_TAPCUP_SIMULATOR_SIDE?.trim() || "consumer";
+  const initialChipPayload = normalizeSimulatorChipPayload(chipUrlFlag || getSavedPersonalId() || "");
+  const [chipUrl, setChipUrl] = useState(() => initialChipPayload.canonicalUrl || "");
+  const [side, setSide] = useState(sideFlag === "shop" ? "shop" : "consumer");
   const [status, setStatus] = useState("");
 
   if (!isSimulatorMode) return null;
 
   function simulateRead() {
-    const value = chipId.trim();
-    if (!value) {
-      setStatus("Enter a chip ID first.");
+    const payload = normalizeSimulatorChipPayload(chipUrl);
+    if (!payload.personalId) {
+      setStatus("Enter a canonical chip URL first.");
       return;
     }
 
-    setSavedPersonalId(value);
+    clearSimulatorBrowserState();
+    setStatus("Cleared cached chip state.");
+    setSavedPersonalId(payload.personalId);
 
-    if (target === "consumer") {
-      navigate(`/consumer?personal_id=${encodeURIComponent(value)}`);
-      setStatus(consumerChipFlag ? `Simulated consumer chip scan for ${value}.` : `Sent ${value} to consumer.`);
+    if (side === "consumer") {
+      navigate(getSimulatorConsumerRoute(payload.personalId));
+      setStatus(`Simulated consumer chip scan for ${payload.personalId}.`);
       return;
     }
 
-    if (target === "shop") {
+    if (side === "shop") {
       navigate("/shop");
-      setStatus(`Saved ${value} for shop.`);
+      setStatus(`Simulated shop chip scan for ${payload.personalId}.`);
       return;
     }
 
-    setStatus(`Saved ${value} to local storage.`);
+    setStatus(`Saved ${payload.personalId} to local storage.`);
   }
 
   return (
@@ -51,9 +59,9 @@ export default function SimulatorNfcPanel() {
         <div>
           <p className="font-semibold text-sm">Simulator NFC</p>
           <p className="text-xs text-muted-foreground">Push a manual chip read into the app</p>
-          {consumerChipFlag && (
+          {chipUrlFlag && (
             <p data-testid="simulator-consumer-chip-flag" className="text-[11px] text-amber-700 font-medium mt-1">
-              Consumer chip flag active
+              Canonical chip URL flag active
             </p>
           )}
         </div>
@@ -61,27 +69,29 @@ export default function SimulatorNfcPanel() {
 
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">Chip ID</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Canonical chip URL</label>
           <Input
             data-testid="simulator-nfc-chip"
-            value={chipId}
-            onChange={(e) => setChipId(e.target.value)}
-            placeholder="SIM-111111"
-            className="h-10 rounded-xl font-mono text-sm"
+            value={chipUrl}
+            onChange={(e) => setChipUrl(e.target.value)}
+            placeholder="https://tap-cup.base44.app/consumer?personal_id=NFC-AJV32A"
+            className="h-10 rounded-xl font-mono text-xs"
           />
+          <p className="mt-1 text-[11px] text-muted-foreground break-all">
+            personal_id: <span data-testid="simulator-nfc-personal-id">{normalizeSimulatorChipPayload(chipUrl).personalId || "n/a"}</span>
+          </p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">Target</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Side</label>
           <select
-            data-testid="simulator-nfc-target"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            data-testid="simulator-nfc-side"
+            value={side}
+            onChange={(e) => setSide(e.target.value)}
             className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none"
           >
-            <option value="consumer">Consumer</option>
-            <option value="shop">Shop</option>
-            <option value="store">Store only</option>
+            <option value="consumer">Consumer side</option>
+            <option value="shop">Shop side</option>
           </select>
         </div>
 
@@ -90,7 +100,7 @@ export default function SimulatorNfcPanel() {
           onClick={simulateRead}
           className="w-full h-10 rounded-xl bg-primary text-primary-foreground"
         >
-          {consumerChipFlag && target === "consumer" ? "Simulate Consumer Chip Scan" : "Simulate NFC Read"}
+          {side === "consumer" ? "Simulate Consumer Chip Scan" : "Simulate Shop Chip Scan"}
         </Button>
 
         {status && <p className="text-xs text-muted-foreground">{status}</p>}

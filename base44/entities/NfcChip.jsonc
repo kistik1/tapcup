@@ -1,0 +1,43 @@
+{
+  "name": "NfcChip",
+  "type": "object",
+  "properties": {
+    "personal_id": {
+      "type": "string",
+      "description": "Unique personal ID stored in the chip URL"
+    },
+    "canonical_url": {
+      "type": "string",
+      "description": "Canonical TapCup URL written to the NFC chip"
+    },
+    "profile_id": {
+      "type": "string",
+      "description": "Linked CoffeeProfile ID"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive"],
+      "default": "active"
+    },
+    "assigned_by_role": {
+      "type": "string",
+      "description": "Role that assigned or reassigned this chip"
+    },
+    "assigned_by_label": {
+      "type": "string",
+      "description": "Human label for the assigning operator"
+    },
+    "assigned_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deactivated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": ["personal_id", "canonical_url", "profile_id", "status"]
+}

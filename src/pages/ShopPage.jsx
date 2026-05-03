@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Link2, Search, KeyRound, Phone } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -7,9 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
 import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
-import { getSavedPersonalId, setSavedPersonalId } from "@/lib/personal-id";
+import PasswordGate from "@/components/shared/PasswordGate";
+import { getSavedPersonalId, setCachedRoleContext, setSavedPersonalId } from "@/lib/personal-id";
+
+const SHOP_SESSION_KEY = "tapcup_shop_unlocked";
+const SHOP_PASSWORD = import.meta.env.VITE_TAPCUP_SHOP_PASSWORD;
 
 export default function ShopPage() {
+  return (
+    <PasswordGate
+      title="Shop Access"
+      description="Enter the TapCup shop password to resolve customers and log orders."
+      password={SHOP_PASSWORD}
+      sessionKey={SHOP_SESSION_KEY}
+    >
+      <ShopExperience />
+    </PasswordGate>
+  );
+}
+
+function ShopExperience() {
+  const [searchParams] = useSearchParams();
+  const personalId = searchParams.get("personal_id");
   const [manualInput, setManualInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [resolving, setResolving] = useState(false);
@@ -113,10 +132,43 @@ export default function ShopPage() {
   }
 
   useEffect(() => {
+    setCachedRoleContext("shop", "/shop");
     return () => {
       clearResolveTimer();
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function resolveIncomingPersonalId() {
+      if (!personalId) return;
+      setManualInput(personalId);
+      setResolving(true);
+      setError("");
+      try {
+        const results = await base44.entities.CoffeeProfile.filter({ nfc_id: personalId });
+        if (cancelled) return;
+        if (results.length === 0) {
+          setCustomer(null);
+          setError("No customer found with that personal ID");
+          return;
+        }
+        setSavedPersonalId(results[0].nfc_id);
+        setCustomer(results[0]);
+      } catch (err) {
+        if (!cancelled) setError(err?.message || "Unable to resolve personal ID");
+      } finally {
+        if (!cancelled) setResolving(false);
+      }
+    }
+
+    resolveIncomingPersonalId();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [personalId]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -270,7 +322,11 @@ export default function ShopPage() {
             >
               <ArrowLeft className="w-4 h-4" /> Scan again
             </button>
-            <CustomerProfileView profile={customer} />
+            <CustomerProfileView
+              profile={customer}
+              enableChipSetup
+              onProfileUpdated={(updatedProfile) => setCustomer(updatedProfile)}
+            />
           </motion.div>
         )}
       </AnimatePresence>
