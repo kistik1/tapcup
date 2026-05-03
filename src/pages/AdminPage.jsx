@@ -14,7 +14,7 @@ import {
 } from "@/lib/personal-id";
 
 const ADMIN_SESSION_KEY = "tapcup_admin_unlocked";
-const ADMIN_PASSWORD = import.meta.env.VITE_TAPCUP_ADMIN_PASSWORD;
+const ADMIN_PASSWORD = import.meta.env.VITE_TAPCUP_ADMIN_PASSWORD = "admin";
 
 const emptyShopForm = { name: "", address: "", phone: "", notes: "" };
 const emptyStaffForm = {
@@ -223,7 +223,7 @@ export default function AdminPage() {
     <PasswordGate
       title="Admin Access"
       description="Enter the TapCup admin password to manage chips, shops, staff, and system statistics."
-      password={ADMIN_PASSWORD}
+      password={ADMIN_PASSWORD} 
       sessionKey={ADMIN_SESSION_KEY}
     >
       <div className="min-h-screen bg-background">
