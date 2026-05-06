@@ -1,303 +1,278 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { ArrowUpRight, Menu, Search, ShoppingBasket } from "lucide-react";
 import {
-  ArrowRight,
-  Check,
-  Gift,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  Tag,
-} from "lucide-react";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
-const products = [
+const categories = [
   {
-    name: "Orbit Brass",
-    price: "$24",
-    tone: "Brushed brass",
-    copy: "Warm metallic finish with a deep-etched monogram plate for daily carry.",
-    accent: "from-amber-300 via-yellow-200 to-stone-100",
+    title: "Monogram",
+    image:
+      "https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=1200&auto=format&fit=crop",
+    href: "#monogram",
   },
   {
-    name: "Signal Acrylic",
-    price: "$18",
-    tone: "Smoked crystal",
-    copy: "Layered translucent body with precise edge polish and color-filled engraving.",
-    accent: "from-cyan-300 via-sky-200 to-white",
+    title: "Leather",
+    image:
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1200&auto=format&fit=crop",
+    href: "#leather",
   },
   {
-    name: "Afterglow Leather",
-    price: "$29",
-    tone: "Vegetable-tanned",
-    copy: "Soft pull-up leather loop with contrast stitching and engraved steel clasp.",
-    accent: "from-orange-300 via-rose-200 to-stone-100",
+    title: "Acrylic",
+    image:
+      "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1200&auto=format&fit=crop",
+    href: "#acrylic",
+  },
+  {
+    title: "Gift Sets",
+    image:
+      "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=1200&auto=format&fit=crop",
+    href: "#gift-sets",
   },
 ];
 
-const highlights = [
-  "Hand-finished in small weekly batches",
-  "Gift-ready packaging included",
-  "Fast personalization preview in 24 hours",
-];
-
-const stats = [
-  { label: "Repeat buyers", value: "62%" },
-  { label: "Avg. production", value: "3 days" },
-  { label: "5-star reviews", value: "1.2k" },
+const navigation = [
+  { name: "Home", href: "/" },
+  { name: "Shop", href: "#collection" },
+  { name: "Collections", href: "#collection" },
+  { name: "Story", href: "#story" },
 ];
 
 export default function KeychainLandingPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,211,153,0.28),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_#fff7ed_44%,_hsl(var(--background)))] text-foreground">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-16 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between py-6">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,_hsl(var(--primary)),_hsl(var(--accent)))] shadow-[0_18px_40px_rgba(120,72,22,0.25)]">
-              <Tag className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <p className="font-playfair text-2xl font-bold tracking-tight">Latch & Loop</p>
-              <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
-                Custom Keychains
-              </p>
-            </div>
-          </Link>
+    <div className="relative min-h-screen w-full overflow-hidden bg-background">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(224,163,81,0.18),_transparent_35%),linear-gradient(180deg,_rgba(255,247,237,0.9),_transparent_50%)]" />
 
-          <div className="hidden items-center gap-6 md:flex">
-            <a href="#collection" className="text-sm text-muted-foreground transition hover:text-foreground">
-              Collection
-            </a>
-            <a href="#craft" className="text-sm text-muted-foreground transition hover:text-foreground">
-              Craft
-            </a>
-            <a href="#reviews" className="text-sm text-muted-foreground transition hover:text-foreground">
-              Reviews
-            </a>
-            <Button className="rounded-full px-5">Start Your Design</Button>
-          </div>
-        </header>
+      <div className="relative container mx-auto min-h-screen max-w-7xl px-2">
+        <div className="relative mt-6 rounded-2xl bg-accent/35">
+          <header className="flex items-center">
+            <div className="flex w-full items-center gap-2 rounded-br-2xl bg-background/95 p-4 backdrop-blur-sm md:w-2/3 lg:w-1/2">
+              <Link
+                to="/"
+                className="text-xl font-semibold text-transparent bg-gradient-to-r from-primary to-primary/80 bg-clip-text"
+              >
+                Latch&Loop_
+              </Link>
 
-        <main className="flex-1">
-          <section className="grid items-center gap-10 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:py-16">
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55 }}
-              className="max-w-2xl"
-            >
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-white/80 px-4 py-2 text-sm shadow-sm backdrop-blur">
-                <Sparkles className="h-4 w-4 text-amber-700" />
-                Personal stories, clipped to your pocket
-              </div>
-
-              <h1 className="mt-6 font-playfair text-5xl font-bold leading-none tracking-tight text-stone-950 sm:text-6xl lg:text-7xl">
-                Keychains worth
-                <span className="block text-primary">showing off.</span>
-              </h1>
-
-              <p className="mt-6 max-w-xl text-lg leading-8 text-stone-700">
-                Boutique keychains for gifts, merch drops, and everyday carry. Pick your
-                material, add initials or artwork, and ship a piece that feels more collectible
-                than accessory.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Button className="h-12 rounded-full px-6 text-sm">
-                  Shop Signature Styles
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button variant="outline" className="h-12 rounded-full border-stone-300 bg-white/80 px-6 text-sm">
-                  Bulk Orders & Events
-                </Button>
-              </div>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                {stats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-3xl border border-white/70 bg-white/75 px-4 py-4 shadow-[0_20px_45px_rgba(120,72,22,0.08)] backdrop-blur"
-                  >
-                    <p className="text-2xl font-semibold text-stone-950">{stat.value}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
-                  </div>
+              <nav className="hidden w-full items-center justify-between lg:flex">
+                {navigation.map((item) => (
+                  <a key={item.name} href={item.href}>
+                    <Button
+                      variant="link"
+                      className="group relative cursor-pointer transition-colors hover:text-primary"
+                    >
+                      {item.name}
+                    </Button>
+                  </a>
                 ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="relative"
-            >
-              <div className="absolute -left-6 top-8 hidden h-24 w-24 rounded-full bg-amber-200/70 blur-2xl lg:block" />
-              <div className="absolute -right-4 bottom-10 hidden h-28 w-28 rounded-full bg-orange-200/70 blur-2xl lg:block" />
-              <div className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(160deg,_rgba(255,255,255,0.88),_rgba(255,244,230,0.96))] p-6 shadow-[0_35px_80px_rgba(120,72,22,0.16)]">
-                <div className="grid gap-5 sm:grid-cols-[1.1fr_0.9fr]">
-                  <div className="rounded-[1.75rem] bg-stone-950 p-5 text-stone-50">
-                    <p className="text-xs uppercase tracking-[0.3em] text-stone-400">Featured Drop</p>
-                    <div className="mt-6 flex items-center justify-center rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(255,221,173,0.25),_transparent_40%),linear-gradient(180deg,_rgba(255,255,255,0.08),_rgba(255,255,255,0.02))] px-6 py-10">
-                      <div className="relative flex h-56 w-40 items-center justify-center">
-                        <div className="absolute top-4 h-16 w-16 rounded-full border-[10px] border-amber-300/80" />
-                        <div className="absolute top-16 h-32 w-24 rounded-[1.8rem] bg-[linear-gradient(160deg,_#f5d39c,_#b7813f_60%,_#704214)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_20px_30px_rgba(0,0,0,0.35)]" />
-                        <div className="absolute top-[5.8rem] flex h-16 w-16 items-center justify-center rounded-full border border-white/30 bg-black/20">
-                          <Star className="h-6 w-6 text-amber-100" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col justify-between rounded-[1.75rem] bg-white/80 p-5">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Why It Converts</p>
-                      <ul className="mt-5 space-y-4">
-                        {highlights.map((item) => (
-                          <li key={item} className="flex items-start gap-3 text-sm leading-6 text-stone-700">
-                            <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-800">
-                              <Check className="h-4 w-4" />
-                            </span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="mt-6 rounded-[1.5rem] border border-amber-100 bg-amber-50/80 p-4">
-                      <p className="text-xs uppercase tracking-[0.26em] text-amber-800">Starter Bundle</p>
-                      <div className="mt-3 flex items-end justify-between gap-4">
-                        <div>
-                          <p className="text-3xl font-semibold text-stone-950">$52</p>
-                          <p className="text-sm text-stone-600">3 personalized pieces</p>
-                        </div>
-                        <Gift className="h-7 w-7 text-amber-700" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </section>
-
-          <section
-            id="collection"
-            className="mt-10 rounded-[2rem] border border-white/70 bg-white/75 p-6 shadow-[0_25px_60px_rgba(120,72,22,0.08)] backdrop-blur sm:p-8"
-          >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.28em] text-muted-foreground">Collection</p>
-                <h2 className="mt-3 font-playfair text-3xl font-bold text-stone-950 sm:text-4xl">
-                  Three hero styles. Endless initials.
-                </h2>
-              </div>
-              <p className="max-w-xl text-sm leading-7 text-stone-600">
-                The live 21st-dev commerce hero suggested a premium assortment layout. I used that
-                direction here, but tailored it to a smaller handcrafted product catalog.
-              </p>
-            </div>
-
-            <div className="mt-8 grid gap-5 lg:grid-cols-3">
-              {products.map((product, index) => (
-                <motion.article
-                  key={product.name}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, delay: index * 0.08 }}
-                  className="overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="group relative cursor-pointer transition-colors hover:text-primary"
                 >
-                  <div className={`flex h-56 items-center justify-center bg-gradient-to-br ${product.accent}`}>
-                    <div className="relative flex h-36 w-28 items-center justify-center">
-                      <div className="absolute top-1 h-11 w-11 rounded-full border-[8px] border-stone-900/70" />
-                      <div className="absolute top-10 h-24 w-16 rounded-[1.25rem] bg-white/80 shadow-[0_18px_35px_rgba(0,0,0,0.18)]" />
-                      <div className="absolute top-[3.65rem] rounded-full bg-stone-900 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-stone-100">
-                        Loop
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-stone-950">{product.name}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">{product.tone}</p>
-                      </div>
-                      <p className="text-lg font-semibold text-primary">{product.price}</p>
-                    </div>
-                    <p className="mt-4 text-sm leading-7 text-stone-600">{product.copy}</p>
-                    <Button variant="outline" className="mt-5 w-full rounded-full border-stone-300 bg-transparent">
-                      Customize This Piece
+                  <Search className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="group relative cursor-pointer transition-colors hover:text-primary"
+                >
+                  <ShoppingBasket className="h-5 w-5" />
+                </Button>
+              </nav>
+
+              <Sheet>
+                <SheetTrigger asChild className="ml-auto lg:hidden">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="transition-colors hover:text-primary"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="left"
+                  className="w-[300px] border-r border-border/50 bg-background/95 p-0 backdrop-blur-md sm:w-[400px]"
+                >
+                  <SheetHeader className="border-b border-border/50 p-6 text-left">
+                    <SheetTitle className="flex items-center justify-between">
+                      <a
+                        href="/keychains"
+                        className="text-xl font-semibold text-transparent bg-gradient-to-r from-primary to-primary/80 bg-clip-text"
+                      >
+                        Latch&Loop_
+                      </a>
+                    </SheetTitle>
+                  </SheetHeader>
+                  <nav className="flex flex-col space-y-1 p-6">
+                    {navigation.map((item) => (
+                      <a key={item.name} href={item.href}>
+                        <Button
+                          variant="ghost"
+                          className="h-12 justify-start px-2 text-base font-medium transition-colors hover:bg-accent/50 hover:text-primary"
+                        >
+                          {item.name}
+                        </Button>
+                      </a>
+                    ))}
+                  </nav>
+                  <Separator className="mx-6" />
+                  <div className="flex flex-col gap-4 p-6">
+                    <Button
+                      variant="outline"
+                      className="h-12 justify-start gap-2 transition-colors hover:bg-accent/50"
+                    >
+                      <Search className="h-4 w-4" />
+                      Search
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="relative h-12 justify-start gap-2 transition-colors hover:bg-accent/50"
+                    >
+                      <ShoppingBasket className="h-4 w-4" />
+                      Cart
+                      <span className="absolute right-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                        3
+                      </span>
                     </Button>
                   </div>
-                </motion.article>
-              ))}
-            </div>
-          </section>
-
-          <section id="craft" className="grid gap-6 py-12 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="rounded-[2rem] bg-stone-950 p-8 text-stone-50 shadow-[0_30px_65px_rgba(28,25,23,0.26)]">
-              <p className="text-sm uppercase tracking-[0.3em] text-stone-400">Craft Promise</p>
-              <h2 className="mt-4 font-playfair text-3xl font-bold sm:text-4xl">
-                Small accessories, luxury-level finish.
-              </h2>
-              <p className="mt-5 max-w-lg text-sm leading-7 text-stone-300">
-                Every order is reviewed by a human before engraving. That keeps lettering crisp,
-                spacing balanced, and bulk runs consistent.
-              </p>
-              <div className="mt-8 space-y-4">
-                {[
-                  "Laser-cut prototypes before final batch production",
-                  "Scratch-resistant coating on acrylic and brass finishes",
-                  "Backed by a 30-day remake guarantee",
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-3 rounded-2xl bg-white/5 p-4">
-                    <ShieldCheck className="mt-0.5 h-5 w-5 text-amber-300" />
-                    <p className="text-sm leading-6 text-stone-200">{item}</p>
+                  <Separator className="mx-6" />
+                  <div className="p-6">
+                    <Button className="h-12 w-full bg-gradient-to-r from-primary to-primary/80 shadow-lg transition-all duration-300 hover:from-primary/90 hover:to-primary/70 hover:shadow-xl">
+                      Start Designing
+                      <ArrowUpRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </div>
-                ))}
-              </div>
+                </SheetContent>
+              </Sheet>
             </div>
 
-            <div
-              id="reviews"
-              className="rounded-[2rem] border border-white/70 bg-[linear-gradient(180deg,_rgba(255,255,255,0.82),_rgba(255,248,240,0.94))] p-8 shadow-[0_25px_60px_rgba(120,72,22,0.08)]"
-            >
-              <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Social Proof</p>
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                {[
-                  {
-                    quote:
-                      "Our event merch went from filler item to best-seller. The finish felt premium right out of the box.",
-                    author: "Maya, studio founder",
-                  },
-                  {
-                    quote:
-                      "The acrylic version caught light beautifully in product photos and the customization turnaround was fast.",
-                    author: "Noah, marketplace seller",
-                  },
-                ].map((review) => (
-                  <div key={review.author} className="rounded-[1.5rem] border border-stone-200 bg-white p-5">
-                    <div className="flex gap-1 text-amber-500">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <Star key={index} className="h-4 w-4 fill-current" />
-                      ))}
-                    </div>
-                    <p className="mt-4 text-sm leading-7 text-stone-700">“{review.quote}”</p>
-                    <p className="mt-4 text-sm font-medium text-stone-950">{review.author}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 flex flex-col gap-4 rounded-[1.5rem] border border-dashed border-amber-300 bg-amber-50/70 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-stone-950">Ready to launch a keychain drop?</p>
-                  <p className="mt-1 text-sm text-stone-600">
-                    Start with one piece or brief us for 500-unit branded runs.
-                  </p>
+            <div className="ml-auto hidden w-1/2 items-center justify-end gap-4 pr-4 md:flex">
+              <Button
+                variant="secondary"
+                className="group cursor-pointer rounded-full bg-primary-foreground p-0 shadow-lg transition-all duration-300 hover:shadow-xl"
+              >
+                <span className="pl-4 py-2 text-sm font-medium">Build Your Set</span>
+                <div className="ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-background transition-transform duration-300 group-hover:scale-110">
+                  <ArrowUpRight className="h-5 w-5" />
                 </div>
-                <Button className="rounded-full px-6">Request a Sample Pack</Button>
-              </div>
+              </Button>
             </div>
-          </section>
-        </main>
+          </header>
+
+          <motion.section
+            className="w-full px-4 py-24"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
+            <div className="mx-auto text-center">
+              <motion.h1
+                className="mb-6 text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-7xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+              >
+                <span className="bg-gradient-to-r from-primary via-primary/90 to-primary/70 bg-clip-text text-transparent">
+                  Curate your keychains
+                </span>
+                <br />
+                <span className="text-foreground">into signature collections.</span>
+              </motion.h1>
+              <motion.p
+                className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+              >
+                Personalize brass tags, leather loops, and crystal acrylic drops with a
+                storefront shaped like a premium product catalog.
+              </motion.p>
+            </div>
+          </motion.section>
+        </div>
+
+        <div
+          id="collection"
+          className="mx-auto mt-12 grid max-w-7xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-2 lg:grid-cols-4"
+        >
+          {categories.map((category, index) => (
+            <motion.div
+              key={category.title}
+              className="group relative min-h-[250px] w-full overflow-hidden rounded-3xl bg-muted/50 p-4 backdrop-blur-sm transition-all duration-500 sm:min-h-[300px] sm:p-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: index * 0.1, ease: "easeOut" }}
+            >
+              <a href={category.href} className="absolute inset-0 z-20">
+                <h2 className="relative z-10 my-2 text-center text-2xl font-bold text-primary transition-colors duration-300 group-hover:text-primary/90 sm:my-4 sm:text-3xl md:text-4xl lg:text-[clamp(1.5rem,4vw,2.5rem)]">
+                  {category.title}
+                </h2>
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <img
+                    src={category.image}
+                    alt={category.title}
+                    className={cn(
+                      "h-auto w-full object-contain opacity-90 transition-all duration-500 group-hover:scale-110 group-hover:opacity-100",
+                      "max-w-[min(40vw,200px)] sm:max-w-[min(30vw,180px)] md:max-w-[min(25vw,160px)] lg:max-w-[min(20vw,140px)]"
+                    )}
+                  />
+                </div>
+                <div className="absolute bottom-0 right-0 z-10 flex h-16 w-16 items-center justify-center rounded-tl-xl border-l border-t border-border/50 bg-background/95 backdrop-blur-sm md:h-20 md:w-20">
+                  <div className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full bg-secondary shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground md:bottom-3 md:right-3 md:h-12 md:w-12">
+                    <ArrowUpRight className="h-5 w-5" />
+                  </div>
+                </div>
+              </a>
+            </motion.div>
+          ))}
+        </div>
+
+        <section id="story" className="mx-auto mt-12 grid max-w-7xl gap-6 pb-16 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-3xl border border-border/60 bg-card/80 p-6 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
+              Crafted for gifting
+            </p>
+            <h3 className="mt-4 font-playfair text-3xl font-bold text-foreground">
+              Boutique details, sold like a premium drop.
+            </h3>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
+              This version follows the Magic 21st commerce-hero pattern directly: a split
+              header, animated hero statement, and a four-card merchandising grid. The
+              difference is the brand and catalog focus are now fully keychain-specific.
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-primary p-6 text-primary-foreground shadow-lg">
+            <p className="text-xs uppercase tracking-[0.28em] text-primary-foreground/70">
+              Fast bundle
+            </p>
+            <div className="mt-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-4xl font-semibold">$52</p>
+                <p className="mt-1 text-sm text-primary-foreground/80">
+                  Three personalized pieces with gift packaging
+                </p>
+              </div>
+              <ShoppingBasket className="h-8 w-8" />
+            </div>
+            <Button
+              variant="secondary"
+              className="mt-6 rounded-full bg-background text-foreground hover:bg-background/90"
+            >
+              Reserve Your Set
+            </Button>
+          </div>
+        </section>
       </div>
     </div>
   );
