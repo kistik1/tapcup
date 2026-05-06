@@ -127,6 +127,20 @@ export default function Home() {
       >
         Chip-linked coffee ordering
       </motion.p>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.95 }}
+        className="mt-4"
+      >
+        <Link
+          to="/keychains"
+          className="text-xs font-medium uppercase tracking-[0.28em] text-primary transition hover:text-primary/80"
+        >
+          View keychain sales page
+        </Link>
+      </motion.div>
     </div>
   );
 }
