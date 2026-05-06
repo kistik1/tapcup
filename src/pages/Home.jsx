@@ -67,7 +67,7 @@ export default function Home() {
             <Coffee className="w-6 h-6 text-white" />
           </div>
           <h1 className="font-playfair text-4xl font-bold text-foreground tracking-tight">
-            TapCup
+            TapCup - BRANCH
           </h1>
         </div>
         <p className="text-muted-foreground text-sm tracking-wide uppercase font-medium">
