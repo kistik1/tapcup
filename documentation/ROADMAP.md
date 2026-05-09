@@ -195,12 +195,12 @@
 ## Branch Strategy
 
 ```
-main  ←  dev  ←  feat/chip-flow-full         (Phase 1)
-                  feat/preference-ux           (Phase 2)
-                  feat/consumer-profile-polish (Phase 3)
-                  feat/admin-operations        (Phase 4)
-                  feat/shop-barista-view       (Phase 5)
-                  feat/growth-loyalty          (Phase 7)
+origin/main  ←  feat/chip-flow-full         (Phase 1)
+                feat/preference-ux           (Phase 2)
+                feat/consumer-profile-polish (Phase 3)
+                feat/admin-operations        (Phase 4)
+                feat/shop-barista-view       (Phase 5)
+                feat/growth-loyalty          (Phase 7)
 ```
 
-Each phase ships as a `feat/*` branch, verified with `npm run sim:test`, merged to `dev`, reviewed in Base44, then promoted to `main`.
+Each phase ships as a local `feat/*` branch. After `npm run sim:test` passes and the user confirms, it merges directly to `origin/main`. No `dev` branch.

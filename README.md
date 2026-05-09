@@ -8,15 +8,14 @@ App URL: `https://tap-cup.base44.app/`
 
 ## Workflow
 
-- `main` is the production branch for the Base44 app.
-- `dev` is the verified integration branch.
-- Build each change in a dedicated `feat/*` branch from `dev`.
-- Verify locally first.
-- Merge the feature branch into `dev` only after local checks pass.
-- Review the integrated result in Base44.
-- Merge `dev` into `main` when the change is ready for production publish.
+- `main` is the only branch on GitHub. Base44 publishes from `main`.
+- All work happens on local `feat/*` branches — never commit directly to `main`.
+- Develop and verify locally on `localhost:7777`.
+- Run `npm run sim:test` — all tests must pass before pushing.
+- Push to `origin/main` only after explicit confirmation and a clean simulator run.
+- Delete the feature branch after merge.
 
-See [AGENTS.md](/home/kosta/projects/dev/tapcup/AGENTS.md) for the enforced working rules.
+See [AGENTS.md](AGENTS.md) for the enforced working rules.
 
 ## Clone And Setup
 
@@ -148,16 +147,16 @@ Current local limitation:
 - Use `npm run sim:consumer`, `npm run sim:shop`, or `npm run sim:test` as appropriate.
 - After NFC or routing changes, verify the relevant simulator flow.
 - If a change touches reporting or artifacts, confirm `npm run sim:report` still works.
-- For consumer, shop, NFC, `personal_id`, or order/profile behavior, local simulator verification is required before merging into `dev`.
+- For consumer, shop, NFC, `personal_id`, or order/profile behavior, local simulator verification is required before merging into `main`.
 
 ## Base44 Publish
 
-When the integrated change is approved:
+When the feature is verified and the user confirms:
 
-1. Merge the verified feature branch into `dev`.
-2. Review the integrated result in Base44.
-3. Merge `dev` into `main`.
-4. Publish from Base44.
+1. Run `npm run sim:test` — all tests must pass.
+2. Fast-forward merge the feature branch into `origin/main`.
+3. Delete the feature branch.
+4. Base44 publishes automatically from `main`.
 
 ## Docs And Support
 
