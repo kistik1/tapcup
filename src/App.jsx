@@ -14,6 +14,7 @@ import ShopPage from './pages/ShopPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import KeychainSellPage from './pages/KeychainSellPage';
+import KeychainOnboardingPage from './pages/KeychainOnboardingPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -41,6 +42,7 @@ const AuthenticatedApp = () => {
       <Route path="/consumer" element={<ConsumerPage />} />
       <Route path="/shop" element={<ShopPage />} />
       <Route path="/keychains" element={<KeychainSellPage />} />
+      <Route path="/keychains/success" element={<KeychainOnboardingPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="*" element={<PageNotFound />} />

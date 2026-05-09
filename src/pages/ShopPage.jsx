@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
 import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
 import ShopLoginGate from "@/components/shop/ShopLoginGate";
-import { getSavedPersonalId, setCachedRoleContext, setSavedPersonalId } from "@/lib/personal-id";
+import { assignChipToProfile } from "@/lib/chip-assignment";
+import { buildCanonicalChipUrl, generatePersonalId, getSavedPersonalId, setCachedRoleContext, setSavedPersonalId } from "@/lib/personal-id";
 import { isSimulatorMode } from "@/lib/simulator/runtime";
 
 export default function ShopPage() {
@@ -36,6 +37,14 @@ function ShopExperience({ shop, onShopUpdated, onSignOut }) {
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState("");
   const resolveTimerRef = useRef(null);
+
+  const [chipMgmtId, setChipMgmtId] = useState(() => generatePersonalId());
+  const [chipMgmtPhone, setChipMgmtPhone] = useState("");
+  const [chipMgmtProfile, setChipMgmtProfile] = useState(null);
+  const [chipMgmtSaving, setChipMgmtSaving] = useState(false);
+  const [chipMgmtMessage, setChipMgmtMessage] = useState("");
+  const [chipMgmtConflict, setChipMgmtConflict] = useState(null);
+  const [chipMgmtSearching, setChipMgmtSearching] = useState(false);
 
   function clearResolveTimer() {
     if (resolveTimerRef.current) {
@@ -119,6 +128,50 @@ function ShopExperience({ shop, onShopUpdated, onSignOut }) {
       await lookupByPhone(q);
     } finally {
       setPhoneSearching(false);
+    }
+  }
+
+  async function handleChipMgmtPhoneSearch() {
+    const q = chipMgmtPhone.trim();
+    if (!q) return;
+    setChipMgmtSearching(true);
+    setChipMgmtProfile(null);
+    setChipMgmtMessage("");
+    setChipMgmtConflict(null);
+    try {
+      const results = await base44.entities.CoffeeProfile.filter({ phone: q });
+      if (results.length === 0) {
+        setChipMgmtMessage("No customer found with that phone number.");
+      } else {
+        setChipMgmtProfile(results[0]);
+      }
+    } finally {
+      setChipMgmtSearching(false);
+    }
+  }
+
+  async function handleChipMgmtAssign(confirmedReassignment = false) {
+    if (!chipMgmtProfile) return;
+    setChipMgmtSaving(true);
+    setChipMgmtMessage("");
+    setChipMgmtConflict(null);
+    try {
+      const result = await assignChipToProfile({
+        profile: chipMgmtProfile,
+        personalId: chipMgmtId,
+        actorRole: "shop",
+        actorLabel: shop?.name || "Coffee Shop",
+        confirmedReassignment,
+      });
+      setCustomer(result.profile);
+    } catch (err) {
+      if (err.code === "chip_conflict") {
+        setChipMgmtConflict(err.profile);
+      } else {
+        setChipMgmtMessage(err?.message || "Failed to assign chip.");
+      }
+    } finally {
+      setChipMgmtSaving(false);
     }
   }
 
@@ -388,6 +441,117 @@ function ShopExperience({ shop, onShopUpdated, onSignOut }) {
                     )}
                   </Button>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">chip setup</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              {/* Chip Management */}
+              <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-amber-600" />
+                  <p className="text-sm font-semibold">Set Up New Chip</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Personal ID</label>
+                  <div className="flex gap-2 mt-1">
+                    <p
+                      data-testid="shop-chip-mgmt-personal-id"
+                      className="flex-1 text-xs font-mono bg-muted rounded-xl px-3 py-2 break-all"
+                    >
+                      {chipMgmtId}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      data-testid="shop-chip-mgmt-generate"
+                      onClick={() => {
+                        setChipMgmtId(generatePersonalId());
+                        setChipMgmtProfile(null);
+                        setChipMgmtMessage("");
+                        setChipMgmtConflict(null);
+                      }}
+                      className="h-9 rounded-xl px-3 shrink-0"
+                    >
+                      ↻
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Chip URL</label>
+                  <p className="mt-1 text-[10px] font-mono break-all text-muted-foreground bg-muted rounded-xl px-3 py-2">
+                    {buildCanonicalChipUrl(chipMgmtId)}
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={chipMgmtPhone}
+                    onChange={e => { setChipMgmtPhone(e.target.value); setChipMgmtProfile(null); setChipMgmtMessage(""); }}
+                    onKeyDown={e => e.key === "Enter" && handleChipMgmtPhoneSearch()}
+                    placeholder="Customer phone"
+                    type="tel"
+                    className="h-9 rounded-xl text-sm"
+                    data-testid="shop-chip-mgmt-phone"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleChipMgmtPhoneSearch}
+                    disabled={chipMgmtSearching || !chipMgmtPhone.trim()}
+                    className="h-9 rounded-xl px-3 shrink-0"
+                  >
+                    {chipMgmtSearching
+                      ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      : <Search className="w-3 h-3" />
+                    }
+                  </Button>
+                </div>
+
+                {chipMgmtProfile && (
+                  <div className="rounded-xl bg-muted px-3 py-2 text-sm">
+                    <p className="font-medium" data-testid="shop-chip-mgmt-found-name">{chipMgmtProfile.display_name}</p>
+                    <p className="text-xs text-muted-foreground">{chipMgmtProfile.phone}</p>
+                  </div>
+                )}
+
+                {chipMgmtConflict && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-3">
+                    <p className="text-sm font-medium text-amber-900">
+                      This chip is assigned to {chipMgmtConflict.display_name}.
+                    </p>
+                    <p className="text-xs text-amber-800 mt-1">
+                      Confirming will move the chip here and give the old profile a replacement ID.
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={() => handleChipMgmtAssign(true)}
+                      disabled={chipMgmtSaving}
+                      className="mt-2 h-8 rounded-xl bg-amber-700 text-white hover:bg-amber-800 text-xs"
+                    >
+                      Confirm reassignment
+                    </Button>
+                  </div>
+                )}
+
+                {chipMgmtMessage && (
+                  <p className="text-xs text-muted-foreground">{chipMgmtMessage}</p>
+                )}
+
+                <Button
+                  type="button"
+                  onClick={() => handleChipMgmtAssign(false)}
+                  disabled={chipMgmtSaving || !chipMgmtProfile}
+                  className="w-full h-9 rounded-xl text-sm"
+                  data-testid="shop-chip-mgmt-assign"
+                >
+                  {chipMgmtSaving ? "Assigning..." : "Confirm Assign"}
+                </Button>
               </div>
             </div>
           </motion.div>

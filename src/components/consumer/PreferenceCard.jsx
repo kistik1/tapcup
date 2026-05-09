@@ -1,10 +1,16 @@
 import { Star, Edit2, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
-
-const VESSEL_EMOJI = { mug: "🫖", glass: "🥛", ta: "📄" };
+import CoffeeCupSvg from "./CoffeeCupSvg";
 
 export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, onDelete, large }) {
-  const vesselEmoji = VESSEL_EMOJI[pref.vessel] || "☕";
+  const hasLayerData = (pref.coffee_pct || 0) + (pref.water_pct || 0) + (pref.milk_pct || 0) + (pref.foam_pct || 0) > 0;
+  const layers = {
+    coffee: pref.coffee_pct || 0,
+    water:  pref.water_pct  || 0,
+    milk:   pref.milk_pct   || 0,
+    foam:   pref.foam_pct   || 0,
+  };
+
   const details = [
     pref.strength && `${pref.strength}`,
     pref.milk && pref.milk !== "None" && `${pref.milk} milk`,
@@ -19,23 +25,35 @@ export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, 
         animate={{ opacity: 1, y: 0 }}
         className="relative rounded-2xl overflow-hidden shadow-lg border-2 border-amber-400/30"
       >
-        {/* Big image */}
-        <div className="relative h-56 w-full">
+        {/* Hero cup area */}
+        <div className="relative h-56 w-full bg-gradient-to-br from-amber-950 to-amber-800 flex items-center justify-center">
           {pref.image_url ? (
-            <img src={pref.image_url} alt={pref.coffee_type} className="w-full h-full object-cover" />
+            <>
+              <img src={pref.image_url} alt={pref.coffee_type} className="w-full h-full object-cover absolute inset-0" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            </>
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-amber-900 to-amber-600 flex items-center justify-center">
-              <span className="text-6xl">{vesselEmoji}</span>
-            </div>
+            <>
+              <CoffeeCupSvg
+                layers={hasLayerData ? layers : { coffee: 50, water: 0, milk: 20, foam: 30 }}
+                vessel={pref.vessel || "mug"}
+                size={pref.size || "large"}
+                temp={pref.temperature}
+                width={140}
+                clipId={`cup-large-${pref.id}`}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+            </>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
           {/* Default badge */}
           <div className="absolute top-3 left-3 flex items-center gap-1 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
             <Star className="w-3 h-3 fill-white" /> DEFAULT
           </div>
-          {/* Title */}
+
+          {/* Title overlay */}
           <div className="absolute bottom-4 left-4 right-4">
-            <p className="text-white font-playfair text-xl font-bold leading-tight">{pref.name}</p>
+            <p className="text-white font-bold text-xl leading-tight">{pref.name}</p>
             <p className="text-amber-200 text-sm font-medium">{pref.coffee_type}</p>
           </div>
         </div>
@@ -80,14 +98,19 @@ export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, 
       animate={{ opacity: 1, x: 0 }}
       className="relative flex items-center gap-3 bg-card border border-border rounded-2xl overflow-hidden hover:border-amber-300 transition-all"
     >
-      {/* Image */}
-      <div className="w-20 h-20 flex-shrink-0">
+      {/* Cup preview */}
+      <div className="w-20 h-20 flex-shrink-0 bg-gradient-to-br from-amber-950 to-amber-800 flex items-center justify-center overflow-hidden">
         {pref.image_url ? (
           <img src={pref.image_url} alt={pref.coffee_type} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-amber-800 to-amber-500 flex items-center justify-center">
-            <span className="text-2xl">{vesselEmoji}</span>
-          </div>
+          <CoffeeCupSvg
+            layers={hasLayerData ? layers : { coffee: 50, water: 0, milk: 20, foam: 30 }}
+            vessel={pref.vessel || "mug"}
+            size={pref.size || "large"}
+            temp={pref.temperature}
+            width={58}
+            clipId={`cup-compact-${pref.id}`}
+          />
         )}
       </div>
 

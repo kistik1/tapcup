@@ -320,4 +320,100 @@ test.describe('TapCup simulator', () => {
       });
     });
   });
+
+  test('shop: chip management panel generates a personal ID', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'shop chip management panel generates a personal id', async ({ step }) => {
+      await step('Open shop page', 'Chip management section should render in the sidebar', async () => {
+        await page.goto('/shop');
+        await expect(page.getByTestId('shop-tap-nfc')).toBeVisible();
+        await expect(page.getByTestId('shop-chip-mgmt-personal-id')).toBeVisible();
+        const id = await page.getByTestId('shop-chip-mgmt-personal-id').textContent();
+        expect(id.trim()).toMatch(/^NFC-/);
+        return `Chip management visible with personal ID ${id.trim()}`;
+      });
+
+      await step('Regenerate personal ID', 'New personal ID should still be NFC-prefixed', async () => {
+        const before = (await page.getByTestId('shop-chip-mgmt-personal-id').textContent()).trim();
+        await page.getByTestId('shop-chip-mgmt-generate').click();
+        const after = await page.getByTestId('shop-chip-mgmt-personal-id').textContent();
+        expect(after.trim()).toMatch(/^NFC-/);
+        return `Regenerated personal ID from ${before} to ${after.trim()}`;
+      });
+    });
+  });
+
+  test('shop: chip management panel assigns chip to a customer profile', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'shop chip management panel assigns chip to customer', async ({ step }) => {
+      await step('Open shop page', 'Shop scan view should render', async () => {
+        await page.goto('/shop');
+        await expect(page.getByTestId('shop-tap-nfc')).toBeVisible();
+        return 'Shop scan view loaded';
+      });
+
+      await step('Find customer via chip management phone search', 'Customer name should appear in chip management preview', async () => {
+        await page.getByTestId('shop-chip-mgmt-phone').fill(SIMULATOR_PRIMARY_PROFILE.phone);
+        await page.getByTestId('shop-chip-mgmt-phone').press('Enter');
+        await expect(page.getByTestId('shop-chip-mgmt-found-name')).toHaveText(SIMULATOR_PRIMARY_PROFILE.display_name);
+        return `Found customer ${SIMULATOR_PRIMARY_PROFILE.display_name}`;
+      });
+
+      await step('Confirm chip assignment', 'App should transition to customer profile view', async () => {
+        await page.getByTestId('shop-chip-mgmt-assign').click();
+        await expect(page.getByTestId('shop-customer-display-name')).toHaveText(SIMULATOR_PRIMARY_PROFILE.display_name);
+        return `Chip assigned and customer view opened for ${SIMULATOR_PRIMARY_PROFILE.display_name}`;
+      });
+    });
+  });
+
+  test('consumer: chip status shows linked when nfc_id is set', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'consumer chip status shows linked when nfc id is set', async ({ step }) => {
+      await step('Open consumer route with known personal ID', 'Profile should load with Chip Linked badge', async () => {
+        await page.goto(`/consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        await expect(page.getByTestId('consumer-chip-status-badge')).toHaveText('Chip Linked');
+        await expect(page.getByTestId('consumer-profile-nfc-id')).toHaveText(`NFC: ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        return `Profile loaded with Chip Linked badge for NFC ID ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`;
+      });
+    });
+  });
+
+  test('consumer: chip status shows unlinked when nfc_id is empty', async ({ page }, testInfo) => {
+    const NO_CHIP_PROFILE = {
+      id: 'profile_sim_nochip',
+      user_email: 'nochip@tapcup.local',
+      display_name: 'No Chip User',
+      phone: '+15550000099',
+      nfc_id: '',
+      avatar_url: '',
+      created_date: new Date().toISOString(),
+      updated_date: new Date().toISOString(),
+    };
+
+    await page.addInitScript(({ storageKey, extraProfile }) => {
+      const raw = window.localStorage.getItem(storageKey);
+      const state = raw ? JSON.parse(raw) : {};
+      const profiles = Array.isArray(state.CoffeeProfile) ? state.CoffeeProfile : [];
+      if (!profiles.find(p => p.id === extraProfile.id)) {
+        profiles.push(extraProfile);
+      }
+      state.CoffeeProfile = profiles;
+      window.localStorage.setItem(storageKey, JSON.stringify(state));
+    }, { storageKey: 'tapcup_simulator_db_v1', extraProfile: NO_CHIP_PROFILE });
+
+    await runScenario(testInfo, page, 'consumer chip status shows unlinked when nfc id is empty', async ({ step }) => {
+      await step('Open identify screen', 'Identify screen should be visible', async () => {
+        await page.goto('/consumer');
+        await expect(page.getByText('Welcome Back')).toBeVisible();
+        return 'Identify screen loaded';
+      });
+
+      await step('Sign in with no-chip profile', 'No Chip badge should be shown in the profile header', async () => {
+        await page.getByPlaceholder('+972 50 000 0000').fill(NO_CHIP_PROFILE.phone);
+        await page.getByRole('button', { name: /Sign In/i }).click();
+        await expect(page.getByText(NO_CHIP_PROFILE.display_name)).toBeVisible();
+        await expect(page.getByTestId('consumer-chip-status-badge')).toHaveText('No Chip');
+        return `Profile loaded with No Chip badge for ${NO_CHIP_PROFILE.display_name}`;
+      });
+    });
+  });
 });

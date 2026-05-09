@@ -7,9 +7,9 @@ import { isSimulatorMode } from "@/lib/simulator/runtime";
 
 const SHOP_SESSION_KEY = "tapcup_shop_session";
 const SIMULATOR_SHOP = {
-  id: "sim-shop",
-  name: "Coffee Shop",
-  login_username: "sim-shop",
+  id: "shop_sim_001",
+  name: "TapCup Roasters",
+  login_username: "tap",
 };
 
 function getSessionStorage() {
