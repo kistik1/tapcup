@@ -27,8 +27,12 @@ elif [ -d "$CURRENT_LINK" ]; then
 fi
 ln -s "$TARGET_PATH" "$CURRENT_LINK"
 
+if [ -e "${TARGET_PATH}/.env.local" ] && [ ! -L "${TARGET_PATH}/.env.local" ]; then
+  rm -f "${TARGET_PATH}/.env.local"
+fi
+
 if [ -f "${ROOT_DIR}/.env.local" ]; then
-  cp "${ROOT_DIR}/.env.local" "${TARGET_PATH}/.env.local"
+  ln -sfn "${ROOT_DIR}/.env.local" "${TARGET_PATH}/.env.local"
 fi
 
 printf 'Prepared TapCup preview worktree:\n'

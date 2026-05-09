@@ -1,8 +1,18 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { ImagePlus, Images, Trash2 } from "lucide-react";
 
-export default function StepNameNotes({ form, setForm, saving, onSave, editing }) {
+export default function StepNameNotes({
+  form,
+  setForm,
+  saving,
+  onSave,
+  editing,
+  onOpenGallery,
+  onPhotoUpload,
+  onRemovePhoto,
+}) {
   return (
     <div className="space-y-5">
       <div>
@@ -35,6 +45,65 @@ export default function StepNameNotes({ form, setForm, saving, onSave, editing }
           placeholder="e.g. Extra hot, no foam"
           className="mt-1 h-12 rounded-xl text-base"
         />
+      </div>
+
+      <div className="space-y-3">
+        <Label>Preference Photo</Label>
+
+        {form.image_url ? (
+          <div className="rounded-2xl overflow-hidden border border-border bg-card">
+            <img
+              src={form.image_url}
+              alt={form.name || form.coffee_type || "Preference photo"}
+              className="w-full h-44 object-cover"
+            />
+            <div className="flex gap-2 p-3">
+              <label className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => onPhotoUpload?.(event.target.files?.[0])}
+                />
+                <span className="flex items-center justify-center gap-2 h-11 rounded-xl border border-border bg-background text-sm font-medium cursor-pointer hover:bg-muted transition-colors">
+                  <ImagePlus className="w-4 h-4" />
+                  Change Photo
+                </span>
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onRemovePhoto}
+                className="h-11 rounded-xl px-4"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remove
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="flex items-center justify-center gap-2 h-24 rounded-2xl border border-dashed border-border bg-card text-sm font-medium cursor-pointer hover:border-primary/40 hover:bg-muted/40 transition-colors">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => onPhotoUpload?.(event.target.files?.[0])}
+              />
+              <ImagePlus className="w-4 h-4" />
+              Upload Photo
+            </label>
+
+            <button
+              type="button"
+              onClick={onOpenGallery}
+              className="flex items-center justify-center gap-2 h-24 rounded-2xl border border-dashed border-border bg-card text-sm font-medium hover:border-primary/40 hover:bg-muted/40 transition-colors"
+            >
+              <Images className="w-4 h-4" />
+              Choose Gallery Image
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Set as default toggle */}

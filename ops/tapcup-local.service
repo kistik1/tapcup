@@ -4,7 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/kosta/projects/dev/.tapcup-preview-worktrees/current
+WorkingDirectory=/home/kosta/projects/dev/tapcup
+EnvironmentFile=-/home/kosta/projects/dev/tapcup/.env.local
 ExecStart=/home/kosta/projects/dev/tapcup/node_modules/.bin/vite --host 127.0.0.1 --port 7777
 Restart=always
 RestartSec=3
