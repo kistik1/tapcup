@@ -8,6 +8,7 @@ import StepVesselSize  from "./steps/StepVesselSize";
 import StepLayerEditor from "./steps/StepLayerEditor";
 import StepDetails     from "./steps/StepDetails";
 import StepNameNotes   from "./steps/StepNameNotes";
+import ImageGallery from "./ImageGallery";
 
 const STEP_LABELS = ["Cup & Size", "Layers", "Details", "Name & Save"];
 
@@ -53,9 +54,6 @@ function layersFromEditing(editing) {
 }
 
 export default function PreferenceFormStepper({ profile, editing, onClose, onSaved }) {
-  const prefId   = editing?.id || null;
-  const draftKey = [profile.id, prefId];
-
   // Try to restore draft for new preferences
   const draft = !editing ? loadPreferenceDraft(profile.id, null) : null;
 
@@ -64,6 +62,7 @@ export default function PreferenceFormStepper({ profile, editing, onClose, onSav
   const [step, setStep]     = useState(0);
   const [dir, setDir]       = useState(1);  // 1 = forward, -1 = backward
   const [saving, setSaving] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
 
   const draftTimer = useRef(null);
 
@@ -114,13 +113,32 @@ export default function PreferenceFormStepper({ profile, editing, onClose, onSav
     }
   }
 
+  function handlePhotoUpload(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      setForm((current) => ({ ...current, image_url: result }));
+    };
+    reader.readAsDataURL(file);
+  }
+
   const stepProps = { form, setForm, layers, setLayers };
 
   const STEPS = [
     <StepVesselSize  key="vessel"  {...stepProps} />,
     <StepLayerEditor key="layers"  {...stepProps} />,
     <StepDetails     key="details" {...stepProps} />,
-    <StepNameNotes   key="name"    {...stepProps} saving={saving} onSave={handleSave} editing={editing} />,
+    <StepNameNotes
+      key="name"
+      {...stepProps}
+      saving={saving}
+      onSave={handleSave}
+      editing={editing}
+      onOpenGallery={() => setShowGallery(true)}
+      onPhotoUpload={handlePhotoUpload}
+      onRemovePhoto={() => setForm((current) => ({ ...current, image_url: "" }))}
+    />,
   ];
 
   const variants = {
@@ -203,6 +221,16 @@ export default function PreferenceFormStepper({ profile, editing, onClose, onSav
               Next — {STEP_LABELS[step + 1]}
             </button>
           </div>
+        )}
+
+        {showGallery && (
+          <ImageGallery
+            onSelect={(url) => {
+              setForm((current) => ({ ...current, image_url: url }));
+              setShowGallery(false);
+            }}
+            onClose={() => setShowGallery(false)}
+          />
         )}
       </motion.div>
     </div>
