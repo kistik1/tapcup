@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus, Star, LogOut } from "lucide-react";
+import { ArrowLeft, Plus, Star, LogOut, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import IdentifyScreen from "@/components/consumer/IdentifyScreen";
+import PreferenceFormStepper from "@/components/consumer/PreferenceFormStepper";
+import PreferenceList from "@/components/consumer/PreferenceList";
 import PreferenceCard from "@/components/consumer/PreferenceCard";
-import PreferenceForm from "@/components/consumer/PreferenceForm";
+import PreferenceEmptyState from "@/components/consumer/PreferenceEmptyState";
+import ShareOrderSheet from "@/components/consumer/ShareOrderSheet";
 import OrderHistoryList from "@/components/shared/OrderHistoryList";
 import LoadingOverlay from "@/components/shared/LoadingOverlay";
 import CreateProfilePrompt from "@/components/consumer/CreateProfilePrompt";
@@ -24,6 +28,8 @@ export default function ConsumerPage() {
   const [showPrefForm, setShowPrefForm] = useState(false);
   const [editingPref, setEditingPref] = useState(null);
   const [tab, setTab] = useState("prefs"); // prefs | history
+  const [showReplacementModal, setShowReplacementModal] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
 
   useEffect(() => {
     setCachedRoleContext("consumer", "/consumer");
@@ -169,20 +175,70 @@ export default function ConsumerPage() {
         </Link>
         <div className="text-center">
           <p data-testid="consumer-profile-display-name" className="font-semibold text-sm">{profile.display_name}</p>
-          <p data-testid="consumer-profile-nfc-id" className="text-xs text-muted-foreground font-mono">NFC: {profile.nfc_id}</p>
+          <div className="flex items-center justify-center gap-1.5 mt-0.5">
+            <span
+              data-testid="consumer-chip-status-badge"
+              className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                profile.nfc_id ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {profile.nfc_id ? "Chip Linked" : "No Chip"}
+            </span>
+            <span data-testid="consumer-profile-nfc-id" className="text-xs text-muted-foreground font-mono">
+              NFC: {profile.nfc_id}
+            </span>
+          </div>
         </div>
-        <button
-          onClick={handleSignOut}
-          data-testid="consumer-sign-out"
-          aria-label="Sign out"
-          className="text-muted-foreground hover:text-destructive transition-colors p-1"
-          title="יציאה"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {defaultPref && profile.nfc_id && (
+            <button
+              onClick={() => setShowShareSheet(true)}
+              aria-label="Share my order"
+              className="text-muted-foreground hover:text-foreground transition-colors p-1"
+              title="Share my order"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+          )}
+          <button
+            onClick={handleSignOut}
+            data-testid="consumer-sign-out"
+            aria-label="Sign out"
+            className="text-muted-foreground hover:text-destructive transition-colors p-1"
+            title="יציאה"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
+      <Dialog open={showReplacementModal} onOpenChange={setShowReplacementModal}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Request Chip Replacement</DialogTitle>
+            <DialogDescription>
+              Visit any participating TapCup shop and ask a staff member to re-program a new chip to your profile.
+              They will generate a new ID and assign it — your preferences and order history stay intact.
+            </DialogDescription>
+          </DialogHeader>
+          <Button onClick={() => setShowReplacementModal(false)} className="w-full rounded-xl mt-2">Got it</Button>
+        </DialogContent>
+      </Dialog>
+
       <div className="max-w-lg mx-auto px-4 pb-24">
+        {profile.nfc_id && (
+          <div className="flex items-center justify-between px-1 mt-4 mb-1">
+            <span className="text-xs text-muted-foreground font-mono">
+              ID: NFC-••••{profile.nfc_id.slice(-4)}
+            </span>
+            <button
+              onClick={() => setShowReplacementModal(true)}
+              className="text-xs text-amber-700 underline underline-offset-2"
+            >
+              Request Replacement
+            </button>
+          </div>
+        )}
         {/* Tabs */}
         <div className="flex gap-1 mt-5 mb-6 bg-muted rounded-xl p-1">
           {[["prefs", "My Coffees"], ["history", "History"]].map(([key, label]) => (
@@ -200,56 +256,53 @@ export default function ConsumerPage() {
 
         {tab === "prefs" && (
           <div>
-            {/* Default preference */}
-            {defaultPref && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                  <span className="text-sm font-semibold text-amber-700">Default Order</span>
-                </div>
-                <PreferenceCard
-                  pref={defaultPref}
-                  isDefault
-                  onEdit={() => { setEditingPref(defaultPref); setShowPrefForm(true); }}
-                  onSetDefault={() => setDefault(defaultPref)}
-                  onDelete={() => deletePref(defaultPref)}
-                  large
-                />
-              </div>
-            )}
-
-            {/* Other preferences */}
-            {otherPrefs.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-3">Other Preferences</p>
-                <div className="flex flex-col gap-3">
-                  {otherPrefs.map(pref => (
+            {preferences.length === 0 ? (
+              <PreferenceEmptyState onAdd={() => { setEditingPref(null); setShowPrefForm(true); }} />
+            ) : (
+              <>
+                {/* Default preference — large hero card, no swipe gestures */}
+                {defaultPref && (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                      <span className="text-sm font-semibold text-amber-700">Default Order</span>
+                    </div>
                     <PreferenceCard
-                      key={pref.id}
-                      pref={pref}
-                      onEdit={() => { setEditingPref(pref); setShowPrefForm(true); }}
-                      onSetDefault={() => setDefault(pref)}
-                      onDelete={() => deletePref(pref)}
+                      pref={defaultPref}
+                      isDefault
+                      onEdit={() => { setEditingPref(defaultPref); setShowPrefForm(true); }}
+                      onSetDefault={() => setDefault(defaultPref)}
+                      onDelete={() => deletePref(defaultPref)}
+                      large
                     />
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
 
-            {preferences.length === 0 && (
-              <div className="text-center py-16">
-                <div className="text-5xl mb-4">☕</div>
-                <p className="text-muted-foreground">No preferences yet</p>
-                <p className="text-sm text-muted-foreground/70">Add your first coffee preference below</p>
-              </div>
-            )}
+                {/* Other preferences — swipeable, draggable */}
+                {otherPrefs.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Other Preferences</p>
+                    <PreferenceList
+                      preferences={otherPrefs}
+                      onEdit={pref => { setEditingPref(pref); setShowPrefForm(true); }}
+                      onSetDefault={setDefault}
+                      onDelete={deletePref}
+                      onAdd={() => { setEditingPref(null); setShowPrefForm(true); }}
+                      onReorder={() => loadProfileData(profile)}
+                    />
+                  </div>
+                )}
 
-            <Button
-              onClick={() => { setEditingPref(null); setShowPrefForm(true); }}
-              className="w-full mt-6 bg-primary text-primary-foreground rounded-xl h-12 font-semibold"
-            >
-              <Plus className="w-4 h-4 mr-2" /> Add Coffee Preference
-            </Button>
+                {preferences.length < 5 && (
+                  <Button
+                    onClick={() => { setEditingPref(null); setShowPrefForm(true); }}
+                    className="w-full mt-6 bg-primary text-primary-foreground rounded-xl h-12 font-semibold"
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> Add Coffee Preference
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -260,7 +313,7 @@ export default function ConsumerPage() {
 
       {/* Preference Form Modal */}
       {showPrefForm && (
-        <PreferenceForm
+        <PreferenceFormStepper
           profile={profile}
           editing={editingPref}
           onClose={() => { setShowPrefForm(false); setEditingPref(null); }}
@@ -268,7 +321,14 @@ export default function ConsumerPage() {
         />
       )}
 
-
+      {showShareSheet && defaultPref && (
+        <ShareOrderSheet
+          profile={profile}
+          preference={defaultPref}
+          open={showShareSheet}
+          onClose={() => setShowShareSheet(false)}
+        />
+      )}
     </div>
   );
 }

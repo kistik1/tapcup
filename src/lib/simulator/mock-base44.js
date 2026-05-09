@@ -120,6 +120,9 @@ export function createSimulatorBase44() {
       CoffeeProfile: buildCollectionApi("CoffeeProfile", "profile_sim"),
       CoffeePreference: buildCollectionApi("CoffeePreference", "pref_sim"),
       Order: buildCollectionApi("Order", "order_sim"),
+      NfcChip: buildCollectionApi("NfcChip", "chip_sim"),
+      Shop: buildCollectionApi("Shop", "shop_sim"),
+      AdminAuditLog: buildCollectionApi("AdminAuditLog", "audit_sim"),
     },
   };
 }

@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { assignChipToProfile } from "@/lib/chip-assignment";
 import { buildCanonicalChipUrl, generatePersonalId } from "@/lib/personal-id";
-import { isSimulatorMode } from "@/lib/simulator/runtime";
 
 export default function ProfileChipSetup({
   profile,
@@ -23,7 +22,7 @@ export default function ProfileChipSetup({
 
   const canonicalUrl = useMemo(() => buildCanonicalChipUrl(personalId), [personalId]);
 
-  if (isSimulatorMode || !profile) return null;
+  if (!profile) return null;
 
   function generateChipId() {
     const next = generatePersonalId();

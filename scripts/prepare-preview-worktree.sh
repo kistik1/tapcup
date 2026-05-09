@@ -19,8 +19,17 @@ if [ ! -e "${TARGET_PATH}/node_modules" ]; then
   ln -s "${ROOT_DIR}/node_modules" "${TARGET_PATH}/node_modules"
 fi
 
-rm -rf "$CURRENT_LINK"
+if [ -L "$CURRENT_LINK" ] || [ -f "$CURRENT_LINK" ]; then
+  rm -f "$CURRENT_LINK"
+elif [ -d "$CURRENT_LINK" ]; then
+  printf 'Refusing to replace directory preview path: %s\n' "$CURRENT_LINK" >&2
+  exit 1
+fi
 ln -s "$TARGET_PATH" "$CURRENT_LINK"
+
+if [ -f "${ROOT_DIR}/.env.local" ]; then
+  cp "${ROOT_DIR}/.env.local" "${TARGET_PATH}/.env.local"
+fi
 
 printf 'Prepared TapCup preview worktree:\n'
 printf '  branch: %s\n' "$CURRENT_BRANCH"
