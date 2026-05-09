@@ -1,26 +1,100 @@
-**Welcome to your Base44 project** 
+# TapCup
 
-**About**
+TapCup is a Base44 coffee app with `consumer` and `shop` flows.
 
-View and Edit  your app on [Base44.com](http://Base44.com)
+Production identity is URL-driven: the NFC chip stores a canonical TapCup URL such as `https://tap-cup.base44.app/consumer?personal_id=...`, and the app resolves that `personal_id` into a consumer profile. Browser NFC is optional and is not the production source of truth.
 
-This project contains everything you need to run your app locally.
+App URL: `https://tap-cup.base44.app/`
 
-TapCup uses a URL-driven chip identity flow in production: the chip stores a canonical TapCup URL such as `https://tap-cup.base44.app/consumer?personal_id=...`, and the app resolves that URL into a consumer profile. Browser NFC scanning is treated as optional, not required.
+## Workflow
 
-App URL: https://tap-cup.base44.app/
+- `main` is the production branch for the Base44 app.
+- `dev` is the verified integration branch.
+- Build each change in a dedicated `feat/*` branch from `dev`.
+- Verify locally first.
+- Merge the feature branch into `dev` only after local checks pass.
+- Review the integrated result in Base44.
+- Merge `dev` into `main` when the change is ready for production publish.
 
-### Simulator
+See [AGENTS.md](/home/kosta/projects/dev/tapcup/AGENTS.md) for the enforced working rules.
 
-Run the browser simulator with:
+## Clone And Setup
+
+```bash
+git clone <repo-url>
+cd tapcup
+npm install
+cp .env.local.example .env.local
+```
+
+Set the real Base44 values in `.env.local`:
+
+```bash
+VITE_BASE44_APP_ID=your_base44_app_id
+VITE_BASE44_APP_BASE_URL=https://your-app.base44.app
+```
+
+Optional values:
+
+- `VITE_BASE44_FUNCTIONS_VERSION` if your Base44 app requires a pinned functions version.
+- `VITE_TAPCUP_ADMIN_PASSWORD` for `/admin` outside simulator mode.
+
+## Local Preview And Proxy
+
+Use the fixed TapCup local preview port when you want manual browser review or external review through Caddy:
+
+```bash
+npm run dev:local
+```
+
+This starts Vite on `127.0.0.1:7777`.
+
+On this machine, Caddy maps:
+
+- `https://test-dev.kistik.uk` -> `127.0.0.1:7777`
+
+That means `test-dev.kistik.uk` is not a separate deployment target. It is only a hostname that shows the same local branch currently running through `npm run dev:local`.
+
+`npm run dev` is still available for ad hoc Vite startup, but it does not follow the shared TapCup review convention.
+
+## Boot Service
+
+This repo includes a user-level systemd unit at [ops/tapcup-local.service](/home/kosta/projects/dev/tapcup/ops/tapcup-local.service) for running the local review app after reboot.
+
+Install or refresh it with:
+
+```bash
+./scripts/install-user-service.sh
+```
+
+Installed on this machine, it starts:
+
+```bash
+npm run dev:local
+```
+
+from this clone at:
+
+- `/home/kosta/projects/dev/tapcup`
+
+Important behavior:
+
+- the service serves whichever branch is currently checked out in this clone
+- `.env.local` must exist in this repo before boot if you want real Base44-backed local mode
+- Caddy continues to expose the service at `https://test-dev.kistik.uk`
+- the installed user unit lives at `~/.config/systemd/user/tapcup-local.service`
+
+## Simulator
+
+The simulator is the local source of truth for consumer identity, shop identity, NFC routing, and `personal_id` flows.
+
+Run the full simulator:
 
 ```bash
 npm run sim:test
 ```
 
-Each simulator run prints a concise pass/fail summary after the Playwright output.
-
-Run a narrower scenario set:
+Run narrower flows:
 
 ```bash
 npm run sim:nfc
@@ -28,9 +102,11 @@ npm run sim:consumer
 npm run sim:shop
 ```
 
-Simulator artifacts are written to `simulator-artifacts/` and include JSON step logs, plain-text logs, screenshots, and Playwright traces on failure.
+The simulator uses Playwright against a simulator-mode app instance on `127.0.0.1:4173`.
 
-To simulate a chip scan from the simulator, pass a canonical chip URL and choose the side:
+Artifacts are written to `simulator-artifacts/` and include JSON step logs, plain-text logs, screenshots, and Playwright traces on failure.
+
+To simulate a chip scan with a canonical chip URL:
 
 ```bash
 npm run sim:nfc -- --chip-url "https://tap-cup.base44.app/consumer?personal_id=NFC-AJV32A" --side consumer
@@ -38,44 +114,52 @@ npm run sim:nfc -- --chip-url "https://tap-cup.base44.app/consumer?personal_id=N
 npm run sim:test -- --chip-url "https://tap-cup.base44.app/consumer?personal_id=NFC-AJV32A"
 ```
 
-`sim:nfc -- --chip-url ...` runs only the NFC redirect test. The simulator parses `personal_id` from the canonical chip URL, clears cached scan state before the run, and then executes the consumer or shop side you selected with `--side`.
-
-`--chip-id` and `--consumer-chip-id` are still accepted as legacy aliases, but the preferred input is now the full canonical chip URL saved on the NFC chip.
-
-To inspect the detailed artifact report after a run, use:
+Inspect the latest simulator artifact report with:
 
 ```bash
 npm run sim:report
 ```
 
-**Edit the code in your local development environment**
+## What Works Locally
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+Reliable in simulator mode:
 
-**Prerequisites:** 
+- consumer lookup by phone or `personal_id`
+- shop lookup by phone or `personal_id`
+- saved-chip behavior
+- consumer profile creation from unknown `personal_id`
+- local order and preference flows backed by simulator state
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+Requires real Base44-backed mode:
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+- auth bootstrap and token-driven login behavior
+- Base44 app public settings and hosted runtime behavior
+- production publish validation
+- final integrated checks for admin and shop-management data
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
+Current local limitation:
 
-Run the app: `npm run dev`
+- the simulator mock only covers `CoffeeProfile`, `CoffeePreference`, and `Order`
+- features that depend on `Shop`, `StaffAccess`, `NfcChip`, or `AdminAuditLog` may be incomplete in pure simulator mode
+- generated canonical chip URLs still point at `https://tap-cup.base44.app` by design
 
-**Publish your changes**
+## Verification Rules
 
-Open [Base44.com](http://Base44.com) and click on Publish.
+- Use `npm run sim:consumer`, `npm run sim:shop`, or `npm run sim:test` as appropriate.
+- After NFC or routing changes, verify the relevant simulator flow.
+- If a change touches reporting or artifacts, confirm `npm run sim:report` still works.
+- For consumer, shop, NFC, `personal_id`, or order/profile behavior, local simulator verification is required before merging into `dev`.
 
-**Docs & Support**
+## Base44 Publish
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+When the integrated change is approved:
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+1. Merge the verified feature branch into `dev`.
+2. Review the integrated result in Base44.
+3. Merge `dev` into `main`.
+4. Publish from Base44.
+
+## Docs And Support
+
+- Base44 GitHub integration docs: `https://docs.base44.com/Integrations/Using-GitHub`
+- Base44 support: `https://app.base44.com/support`
