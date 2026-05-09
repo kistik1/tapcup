@@ -3,24 +3,40 @@
   "type": "object",
   "properties": {
     "actor_role": {
-      "type": "string"
+      "type": "string",
+      "enum": [
+        "admin",
+        "shop"
+      ],
+      "description": "admin or shop"
     },
     "action": {
-      "type": "string"
+      "type": "string",
+      "description": "e.g. assign_chip, reassign_chip, deactivate_chip_records, update_shop_username"
     },
     "entity_type": {
-      "type": "string"
+      "type": "string",
+      "description": "e.g. CoffeeProfile, NfcChip, Shop"
     },
     "entity_id": {
-      "type": "string"
+      "type": "string",
+      "description": "ID of the affected record"
     },
     "details": {
-      "type": "object"
+      "type": "object",
+      "description": "Context object \u2014 contents vary by action type"
     },
     "created_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "Timestamp of the action"
     }
   },
-  "required": ["actor_role", "action", "entity_type", "created_at"]
+  "required": [
+    "actor_role",
+    "action",
+    "entity_type",
+    "entity_id",
+    "created_at"
+  ]
 }

@@ -4,28 +4,23 @@
   "properties": {
     "profile_id": {
       "type": "string",
-      "description": "ID of the CoffeeProfile"
+      "description": "Foreign key \u2192 CoffeeProfile"
     },
     "user_email": {
       "type": "string",
-      "description": "Email of the user"
+      "description": "Denormalized from profile for fast filtering"
     },
     "name": {
       "type": "string",
-      "description": "Preference label e.g. Morning Latte"
+      "description": "Human label, e.g. Morning Latte"
     },
     "coffee_type": {
       "type": "string",
-      "description": "e.g. Latte, Espresso, Cappuccino"
+      "description": "e.g. Latte, Cappuccino, Americano, Flat White, Espresso"
     },
     "strength": {
       "type": "string",
-      "enum": [
-        "Light",
-        "Regular",
-        "Strong",
-        "Extra Strong"
-      ]
+      "description": "Espresso shots: 1, 2, or 3"
     },
     "milk": {
       "type": "string",
@@ -58,23 +53,68 @@
         "Iced"
       ]
     },
-    "notes": {
+    "vessel": {
       "type": "string",
-      "description": "Any special instructions"
+      "enum": [
+        "mug",
+        "glass",
+        "ta"
+      ],
+      "description": "mug / glass / ta (paper cup)"
     },
-    "image_url": {
+    "size": {
       "type": "string",
-      "description": "Selected image URL from gallery"
+      "enum": [
+        "small",
+        "large"
+      ],
+      "description": "small (150ml) / large (300ml)"
+    },
+    "water_pct": {
+      "type": "number",
+      "description": "Water layer 0\u2013100"
+    },
+    "milk_pct": {
+      "type": "number",
+      "description": "Milk layer 0\u2013100"
+    },
+    "coffee_pct": {
+      "type": "number",
+      "description": "Espresso layer 0\u2013100"
+    },
+    "foam_pct": {
+      "type": "number",
+      "description": "Foam layer 0\u2013100"
     },
     "is_default": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "Only one preference per profile should be true"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Special instructions for the barista"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Photo of the drink"
     }
   },
   "required": [
     "profile_id",
     "user_email",
     "name",
-    "coffee_type"
+    "coffee_type",
+    "strength",
+    "milk",
+    "sugar",
+    "temperature",
+    "vessel",
+    "size",
+    "water_pct",
+    "milk_pct",
+    "coffee_pct",
+    "foam_pct",
+    "is_default"
   ]
 }

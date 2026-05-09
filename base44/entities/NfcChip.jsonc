@@ -4,40 +4,57 @@
   "properties": {
     "personal_id": {
       "type": "string",
-      "description": "Unique personal ID stored in the chip URL"
+      "description": "The ID embedded on the chip (unique)"
     },
     "canonical_url": {
       "type": "string",
-      "description": "Canonical TapCup URL written to the NFC chip"
+      "description": "Full URL: https://tap-cup.base44.app/consumer?personal_id=..."
     },
     "profile_id": {
       "type": "string",
-      "description": "Linked CoffeeProfile ID"
+      "description": "Foreign key \u2192 CoffeeProfile currently assigned"
     },
     "status": {
       "type": "string",
-      "enum": ["active", "inactive"],
-      "default": "active"
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "description": "active / inactive"
     },
     "assigned_by_role": {
       "type": "string",
-      "description": "Role that assigned or reassigned this chip"
+      "enum": [
+        "shop",
+        "admin"
+      ],
+      "description": "shop or admin"
     },
     "assigned_by_label": {
       "type": "string",
-      "description": "Human label for the assigning operator"
+      "description": "Shop name or admin label"
     },
     "assigned_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "When this assignment was made"
     },
     "deactivated_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "Set when status changes to inactive"
     },
     "notes": {
-      "type": "string"
+      "type": "string",
+      "description": "Free-text history notes"
     }
   },
-  "required": ["personal_id", "canonical_url", "profile_id", "status"]
+  "required": [
+    "personal_id",
+    "canonical_url",
+    "profile_id",
+    "status",
+    "assigned_by_role",
+    "assigned_at"
+  ]
 }

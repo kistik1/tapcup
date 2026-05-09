@@ -6,36 +6,52 @@
       "type": "string",
       "description": "Shop display name"
     },
-    "status": {
-      "type": "string",
-      "enum": ["active", "inactive"],
-      "default": "active"
-    },
     "address": {
-      "type": "string"
+      "type": "string",
+      "description": "Street address"
     },
     "phone": {
-      "type": "string"
+      "type": "string",
+      "description": "Contact phone"
     },
     "login_username": {
       "type": "string",
-      "description": "Shop login username issued by admin"
+      "description": "Used to authenticate shop staff; must be unique"
     },
     "login_password": {
       "type": "string",
-      "description": "Shop login password issued by admin"
+      "description": "Plain-text password"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "description": "active / inactive \u2014 inactive shops cannot log in"
     },
     "credentials_updated_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "Set every time the password is changed"
     },
     "username_updated_by_role": {
       "type": "string",
-      "description": "Role that last changed the shop username"
+      "enum": [
+        "shop",
+        "admin"
+      ],
+      "description": "Who last changed the username"
     },
     "notes": {
-      "type": "string"
+      "type": "string",
+      "description": "Internal admin notes"
     }
   },
-  "required": ["name", "status"]
+  "required": [
+    "name",
+    "login_username",
+    "login_password",
+    "status"
+  ]
 }

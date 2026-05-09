@@ -4,46 +4,54 @@
   "properties": {
     "profile_id": {
       "type": "string",
-      "description": "ID of the CoffeeProfile"
+      "description": "Foreign key \u2192 CoffeeProfile"
     },
     "user_email": {
-      "type": "string"
+      "type": "string",
+      "description": "Denormalized from profile"
     },
     "preference_id": {
       "type": "string",
-      "description": "ID of CoffeePreference used"
+      "description": "Foreign key \u2192 CoffeePreference (nullable if ad-hoc)"
     },
     "preference_snapshot": {
       "type": "object",
-      "description": "Snapshot of preference at order time"
+      "description": "Full copy of the preference at time of order"
+    },
+    "shop_id": {
+      "type": "string",
+      "description": "Foreign key \u2192 Shop"
     },
     "shop_name": {
       "type": "string",
-      "description": "Name of the coffee shop"
+      "description": "Denormalized shop name for display"
     },
     "barista_notes": {
-      "type": "string"
+      "type": "string",
+      "description": "Notes added by shop staff at order time"
     },
     "price": {
-      "type": "number"
+      "type": "number",
+      "description": "Order price"
     },
     "status": {
       "type": "string",
       "enum": [
-        "Pending",
-        "Preparing",
-        "Ready",
         "Completed"
       ],
-      "default": "Completed"
+      "default": "Completed",
+      "description": "Completed is the only status currently in use"
     },
     "ordered_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "Timestamp of when the order was placed"
     }
   },
   "required": [
     "profile_id",
-    "user_email"
+    "user_email",
+    "status",
+    "ordered_at"
   ]
 }
