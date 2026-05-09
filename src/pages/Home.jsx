@@ -67,7 +67,7 @@ export default function Home() {
             <Coffee className="w-6 h-6 text-white" />
           </div>
           <h1 className="font-playfair text-4xl font-bold text-foreground tracking-tight">
-            TapCup
+            TapCup - BRANCH
           </h1>
         </div>
         <p className="text-muted-foreground text-sm tracking-wide uppercase font-medium">
@@ -127,6 +127,20 @@ export default function Home() {
       >
         Chip-linked coffee ordering
       </motion.p>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.95 }}
+        className="mt-4"
+      >
+        <Link
+          to="/keychains"
+          className="text-xs font-medium uppercase tracking-[0.28em] text-primary transition hover:text-primary/80"
+        >
+          View keychain sales page
+        </Link>
+      </motion.div>
     </div>
   );
 }
