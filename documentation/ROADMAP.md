@@ -102,20 +102,23 @@
 
 ---
 
-## Phase 3 — Consumer Profile Polish
+## Phase 3 — Consumer Profile Polish ✅
 
-### 3.1 Profile Header
+### ✅ 3.1 Profile Header
 - Avatar (initials-based, colored by NFC ID hash)
 - Editable display name inline
-- Phone with edit + confirm flow
+- Phone with edit + confirm flow (UI-only; see Future items)
 - Chip status badge (Linked / Unlinked)
 
-### 3.2 Order History — Richer View
-- Mini cup visual per order
+### ✅ 3.2 Order History — Richer View
+- Mini cup visual per order (CoffeeCupSvg with layer percentages from snapshot)
 - Shop name on each entry
-- Filter by shop or date range
+- Filter by shop or date preset (All time / Last 7 days / Last 30 days)
 - "Reorder" — opens preference editor pre-filled with that order's snapshot
 - Total orders count + favourite drink stat
+
+### Future (Phase 3 follow-ons)
+- SMS verification on phone number save (currently UI-only confirm; add OTP step)
 
 ---
 

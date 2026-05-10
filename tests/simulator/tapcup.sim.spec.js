@@ -2,6 +2,11 @@ import { expect, test } from '@playwright/test';
 import {
   SIMULATOR_PRIMARY_PREFERENCE,
   SIMULATOR_PRIMARY_PROFILE,
+  SIMULATOR_PRIMARY_ORDER,
+  PROFILE_ALEX,
+  PREF_ALEX_FLAT_WHITE,
+  PREF_ALEX_ICED_AMERICANO,
+  SIMULATOR_SHOP_1,
 } from '../../src/lib/simulator/fixtures.js';
 import { normalizeSimulatorChipPayload } from '../../src/lib/simulator/chip-url.js';
 import { runScenario } from './lib/scenario-runner.mjs';
@@ -476,6 +481,80 @@ test.describe('TapCup simulator', () => {
         await expect(page.getByTestId('consumer-chip-status-badge')).toHaveText('Chip Linked');
         await expect(page.getByTestId('consumer-profile-nfc-id')).toHaveText(`NFC: ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
         return `Profile loaded with Chip Linked badge for NFC ID ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`;
+      });
+    });
+  });
+
+  // ── Phase 3 — Consumer Profile Polish ───────────────────────────────────────
+
+  test('consumer: inline display name edit saves the updated name', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'consumer inline display name edit', async ({ step }) => {
+      await step('Load profile via personal_id route', 'Profile card should show name with edit button', async () => {
+        await page.goto(`/consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await expect(page.getByTestId('consumer-profile-display-name')).toBeVisible();
+        return `Profile ${SIMULATOR_PRIMARY_PROFILE.display_name} loaded with editable name`;
+      });
+
+      await step('Edit display name inline', 'Name should update after save', async () => {
+        await page.getByTestId('consumer-profile-name-edit-btn').click({ force: true });
+        await page.getByTestId('consumer-profile-name-input').fill('Maya Updated');
+        await page.getByTestId('consumer-profile-name-input').press('Enter');
+        await expect(page.getByTestId('consumer-profile-display-name')).toHaveText('Maya Updated');
+        return 'Display name updated to Maya Updated';
+      });
+    });
+  });
+
+  test('consumer: history tab shows order count in stats bar', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'consumer history tab shows order stats bar', async ({ step }) => {
+      await step('Open history tab and verify stats bar', 'Stats bar should show order count', async () => {
+        await page.goto(`/consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        await page.getByRole('button', { name: 'History' }).click();
+        await expect(page.getByTestId('consumer-order-stats')).toBeVisible();
+        const text = await page.getByTestId('consumer-order-stats').textContent();
+        expect(text).toMatch(/1 order/);
+        return `Stats bar shows: "${text.trim()}"`;
+      });
+    });
+  });
+
+  test('consumer: history shop filter narrows visible orders', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'consumer history shop filter narrows orders', async ({ step }) => {
+      await step('Load Alex profile and open History', 'Orders from two shops should be visible', async () => {
+        await page.goto('/consumer');
+        await page.getByPlaceholder('+972 50 000 0000').fill(PROFILE_ALEX.phone);
+        await page.getByRole('button', { name: /Sign In/i }).click();
+        await expect(page.getByText(PROFILE_ALEX.display_name)).toBeVisible();
+        await page.getByRole('button', { name: 'History' }).click();
+        await expect(page.getByText(PREF_ALEX_FLAT_WHITE.name).first()).toBeVisible();
+        await expect(page.getByText(PREF_ALEX_ICED_AMERICANO.name).first()).toBeVisible();
+        return `Both orders from two shops visible for ${PROFILE_ALEX.display_name}`;
+      });
+
+      await step('Filter by first shop', 'Only orders from that shop should remain', async () => {
+        await page.getByTestId('consumer-filter-shop').selectOption(SIMULATOR_SHOP_1.name);
+        await expect(page.getByText(PREF_ALEX_FLAT_WHITE.name).first()).toBeVisible();
+        await expect(page.getByText(PREF_ALEX_ICED_AMERICANO.name).first()).not.toBeVisible();
+        return `Filtered to ${SIMULATOR_SHOP_1.name}: only ${PREF_ALEX_FLAT_WHITE.name} visible`;
+      });
+    });
+  });
+
+  test('consumer: reorder opens preference form pre-filled with snapshot', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'consumer reorder opens preference form with snapshot', async ({ step }) => {
+      await step('Open History tab and find Reorder button', 'Reorder button should appear on the order card', async () => {
+        await page.goto(`/consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        await page.getByRole('button', { name: 'History' }).click();
+        await expect(page.getByTestId(`reorder-btn-${SIMULATOR_PRIMARY_ORDER.id}`)).toBeVisible();
+        return `Reorder button visible for order ${SIMULATOR_PRIMARY_ORDER.id}`;
+      });
+
+      await step('Click Reorder', 'Preference form should open as New Preference', async () => {
+        await page.getByTestId(`reorder-btn-${SIMULATOR_PRIMARY_ORDER.id}`).click();
+        await expect(page.getByText('New Preference')).toBeVisible();
+        return 'Preference stepper opened as New Preference for reorder';
       });
     });
   });

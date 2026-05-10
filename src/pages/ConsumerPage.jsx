@@ -234,7 +234,7 @@ export default function ConsumerPage() {
     if (dateFilter === "30") return new Date(o.ordered_at || o.created_date).getTime() >= now - 30 * 86400000;
     return true;
   });
-  const favDrink = mostFrequent(orders.map(o => o.preference_snapshot?.name ?? o.preference_snapshot?.coffee_type));
+  const favDrink = mostFrequent(filteredOrders.map(o => o.preference_snapshot?.name ?? o.preference_snapshot?.coffee_type));
 
   const defaultPref = preferences.find(p => p.is_default);
   const otherPrefs = preferences.filter(p => !p.is_default);
@@ -247,8 +247,7 @@ export default function ConsumerPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="text-center">
-          <p className="font-semibold text-sm">{profile.display_name}</p>
-          <div className="flex items-center justify-center gap-1.5 mt-0.5">
+          <div className="flex items-center justify-center gap-1.5">
             <span
               data-testid="consumer-chip-status-badge"
               className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded ${
@@ -448,9 +447,9 @@ export default function ConsumerPage() {
         {tab === "history" && (
           <div>
             {/* Stats bar */}
-            {orders.length > 0 && (
+            {filteredOrders.length > 0 && (
               <p className="text-xs text-muted-foreground mb-3" data-testid="consumer-order-stats">
-                {orders.length} {orders.length === 1 ? "order" : "orders"}
+                {filteredOrders.length} {filteredOrders.length === 1 ? "order" : "orders"}
                 {favDrink ? ` · Favourite: ${favDrink}` : ""}
               </p>
             )}

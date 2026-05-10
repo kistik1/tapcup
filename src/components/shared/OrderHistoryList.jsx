@@ -1,7 +1,8 @@
 import { format } from "date-fns";
 import { ShoppingBag } from "lucide-react";
+import CoffeeCupSvg from "@/components/consumer/CoffeeCupSvg";
 
-export default function OrderHistoryList({ orders, preferences }) {
+export default function OrderHistoryList({ orders, preferences, onReorder }) {
   if (orders.length === 0) {
     return (
       <div className="text-center py-16">
@@ -21,6 +22,16 @@ export default function OrderHistoryList({ orders, preferences }) {
             <div className="flex items-center gap-3 p-4">
               {pref?.image_url ? (
                 <img src={pref.image_url} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+              ) : pref?.coffee_pct != null ? (
+                <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <CoffeeCupSvg
+                    layers={{ coffee: pref.coffee_pct, water: pref.water_pct, milk: pref.milk_pct, foam: pref.foam_pct }}
+                    vessel={pref.vessel || "mug"}
+                    size={pref.size || "large"}
+                    width={36}
+                    clipId={`order-cup-${order.id}`}
+                  />
+                </div>
               ) : (
                 <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl flex-shrink-0">☕</div>
               )}
@@ -31,6 +42,15 @@ export default function OrderHistoryList({ orders, preferences }) {
                 )}
                 {order.shop_name && (
                   <p className="text-xs text-muted-foreground/70">{order.shop_name}</p>
+                )}
+                {onReorder && order.preference_snapshot && (
+                  <button
+                    onClick={() => onReorder(order.preference_snapshot)}
+                    className="text-xs text-amber-700 font-medium hover:underline mt-1"
+                    data-testid={`reorder-btn-${order.id}`}
+                  >
+                    Reorder
+                  </button>
                 )}
               </div>
               <div className="text-right flex-shrink-0">

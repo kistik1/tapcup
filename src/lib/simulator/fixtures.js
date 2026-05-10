@@ -16,7 +16,7 @@ export const SIMULATOR_PRIMARY_PROFILE = {
   avatar_url: "",
 };
 
-const PROFILE_ALEX = {
+export const PROFILE_ALEX = {
   id: "profile_sim_002",
   user_email: "alex@tapcup.local",
   display_name: "Alex Rivera",
@@ -57,7 +57,7 @@ export const SIMULATOR_PRIMARY_PREFERENCE = {
   size: "large",
 };
 
-const PREF_ALEX_FLAT_WHITE = {
+export const PREF_ALEX_FLAT_WHITE = {
   id: "pref_sim_002",
   profile_id: PROFILE_ALEX.id,
   user_email: PROFILE_ALEX.user_email,
@@ -78,7 +78,7 @@ const PREF_ALEX_FLAT_WHITE = {
   size: "small",
 };
 
-const PREF_ALEX_ICED_AMERICANO = {
+export const PREF_ALEX_ICED_AMERICANO = {
   id: "pref_sim_003",
   profile_id: PROFILE_ALEX.id,
   user_email: PROFILE_ALEX.user_email,

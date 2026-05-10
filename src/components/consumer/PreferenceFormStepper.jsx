@@ -53,12 +53,13 @@ function layersFromEditing(editing) {
   };
 }
 
-export default function PreferenceFormStepper({ profile, editing, onClose, onSaved }) {
-  // Try to restore draft for new preferences
-  const draft = !editing ? loadPreferenceDraft(profile.id, null) : null;
+export default function PreferenceFormStepper({ profile, editing, initialValues, onClose, onSaved }) {
+  // Try to restore draft for new preferences (not for edits or reorders)
+  const draft = (!editing && !initialValues) ? loadPreferenceDraft(profile.id, null) : null;
+  const seed = editing || initialValues;
 
-  const [form, setForm]     = useState(() => draft?.form || formFromEditing(editing));
-  const [layers, setLayers] = useState(() => draft?.layers || layersFromEditing(editing));
+  const [form, setForm]     = useState(() => draft?.form || formFromEditing(seed));
+  const [layers, setLayers] = useState(() => draft?.layers || layersFromEditing(seed));
   const [step, setStep]     = useState(0);
   const [dir, setDir]       = useState(1);  // 1 = forward, -1 = backward
   const [saving, setSaving] = useState(false);
@@ -66,15 +67,15 @@ export default function PreferenceFormStepper({ profile, editing, onClose, onSav
 
   const draftTimer = useRef(null);
 
-  // Debounced draft save (500ms) — new preferences only
+  // Debounced draft save (500ms) — new preferences only, not edits or reorders
   useEffect(() => {
-    if (editing) return;
+    if (editing || initialValues) return;
     if (draftTimer.current) clearTimeout(draftTimer.current);
     draftTimer.current = setTimeout(() => {
       savePreferenceDraft(profile.id, null, { form, layers });
     }, 500);
     return () => { if (draftTimer.current) clearTimeout(draftTimer.current); };
-  }, [form, layers, editing, profile.id]);
+  }, [form, layers, editing, initialValues, profile.id]);
 
   function goNext() {
     setDir(1);

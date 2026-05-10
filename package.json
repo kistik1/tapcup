@@ -15,7 +15,9 @@
     "sim:nfc": "node tests/simulator/run-simulator.mjs nfc",
     "sim:consumer": "node tests/simulator/run-simulator.mjs consumer",
     "sim:shop": "node tests/simulator/run-simulator.mjs shop",
-    "sim:report": "node tests/simulator/run-simulator.mjs --report"
+    "sim:report": "node tests/simulator/run-simulator.mjs --report",
+    "profile:consumer": "node tests/profiling/run-consumer-profile.mjs",
+    "profile:consumer:report": "node tests/profiling/run-consumer-profile.mjs --report"
   },
   "dependencies": {
     "@base44/sdk": "^0.8.27",

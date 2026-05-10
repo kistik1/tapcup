@@ -31,5 +31,6 @@ dist-ssr
 .env
 .vite
 simulator-artifacts/
+profiling-artifacts/
 playwright-report/
 test-results/
