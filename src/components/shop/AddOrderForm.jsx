@@ -10,7 +10,6 @@ export default function AddOrderForm({ profile, preferences, shopName = "Coffee 
   const defaultPref = preferences.find(p => p.is_default);
   const [selectedPrefId, setSelectedPrefId] = useState(defaultPref?.id || (preferences[0]?.id || ""));
   const [notes, setNotes] = useState("");
-  const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e) {
@@ -24,7 +23,6 @@ export default function AddOrderForm({ profile, preferences, shopName = "Coffee 
       preference_snapshot: pref || null,
       shop_name: shopName,
       barista_notes: notes,
-      price: price ? parseFloat(price) : null,
       status: "Completed",
       ordered_at: new Date().toISOString(),
     });
@@ -89,18 +87,6 @@ export default function AddOrderForm({ profile, preferences, shopName = "Coffee 
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="e.g. Extra shot added"
-              className="mt-1 h-11 rounded-xl"
-            />
-          </div>
-
-          <div>
-            <Label>Price (optional)</Label>
-            <Input
-              value={price}
-              onChange={e => setPrice(e.target.value)}
-              placeholder="4.50"
-              type="number"
-              step="0.01"
               className="mt-1 h-11 rounded-xl"
             />
           </div>

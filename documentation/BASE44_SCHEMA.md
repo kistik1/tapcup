@@ -56,7 +56,7 @@ One record per order logged by a shop. Immutable after creation.
 | `preference_snapshot` | JSON | | Full copy of the preference at time of order |
 | `shop_id` | Text | | Foreign key → Shop |
 | `shop_name` | Text | | Denormalized shop name for display |
-| `barista_notes` | Text | | Notes added by shop staff at order time |
+| `barista_notes` | Text | | Notes added by the shop at order time |
 | `price` | Number | | Order price |
 | `status` | Text | ✓ | `"Completed"` (only status currently in use) |
 | `ordered_at` | DateTime | ✓ | Timestamp of when the order was placed |
@@ -90,11 +90,11 @@ One record per coffee shop. Holds login credentials and metadata.
 | `name` | Text | ✓ | Shop display name |
 | `address` | Text | | Street address |
 | `phone` | Text | | Contact phone |
-| `login_username` | Text | ✓ | Used to authenticate shop staff; must be unique |
+| `login_username` | Text | ✓ | Shared shop login username; must be unique |
 | `login_password` | Text | ✓ | Plain-text password (Base44 has no hashing — keep short and rotatable) |
 | `status` | Text | ✓ | `"active"` / `"inactive"` — inactive shops cannot log in |
 | `credentials_updated_at` | DateTime | | Set every time the password is changed |
-| `username_updated_by_role` | Text | | `"shop"` or `"admin"` — who last changed the username |
+| `username_updated_by_role` | Text | | `"shop"` or `"admin"` — who last changed the shared credentials |
 | `notes` | Text | | Internal admin notes |
 
 ---

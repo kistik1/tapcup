@@ -7,6 +7,7 @@ import { normalizeSimulatorChipPayload } from '../../src/lib/simulator/chip-url.
 import { runScenario } from './lib/scenario-runner.mjs';
 
 const PERSONAL_ID_STORAGE_KEY = 'tapcup_last_personal_id';
+const SHOP_SESSION_STORAGE_KEY = 'tapcup_shop_session';
 const UNKNOWN_PERSONAL_ID = 'SIM-NEW-0001';
 const NFC_SCAN_DELAY_MS = 20000;
 const SIMULATOR_SIDE = process.env.VITE_TAPCUP_SIMULATOR_SIDE?.trim() || 'consumer';
@@ -25,6 +26,45 @@ async function seedSavedPersonalId(page, personalId) {
     },
     { storageKey: PERSONAL_ID_STORAGE_KEY, value: personalId }
   );
+}
+
+async function seedRememberedShopSession(page) {
+  await page.addInitScript(
+    ({ storageKey, value }) => {
+      window.localStorage.setItem(storageKey, JSON.stringify(value));
+    },
+    {
+      storageKey: SHOP_SESSION_STORAGE_KEY,
+      value: {
+        id: 'shop_sim_001',
+        name: 'TapCup Roasters',
+        login_username: 'tap',
+      },
+    }
+  );
+}
+
+async function seedVisibilityController(page) {
+  await page.addInitScript(() => {
+    window.__tapcupVisibilityState = "visible";
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => window.__tapcupVisibilityState,
+    });
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => window.__tapcupVisibilityState === "hidden",
+    });
+  });
+}
+
+async function setPageHidden(page) {
+  await page.evaluate(() => {
+    window.__tapcupVisibilityState = "hidden";
+    document.dispatchEvent(new Event("visibilitychange"));
+    window.dispatchEvent(new Event("blur"));
+    window.dispatchEvent(new Event("pagehide"));
+  });
 }
 
 test.describe('TapCup simulator', () => {
@@ -53,6 +93,28 @@ test.describe('TapCup simulator', () => {
         await expect(page).toHaveURL(new RegExp(`/consumer\\?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`));
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
         return 'Profile remained available after reload';
+      });
+    });
+  });
+
+  test('consumer: tap NFC auto-dismisses when the tab becomes hidden', async ({ page }, testInfo) => {
+    await seedVisibilityController(page);
+    await seedSavedPersonalId(page, SIMULATOR_PRIMARY_PROFILE.nfc_id);
+
+    await runScenario(testInfo, page, 'consumer tap nfc auto dismisses when tab becomes hidden', async ({ step }) => {
+      await step('Open consumer landing page', 'Consumer identify screen should render', async () => {
+        await page.goto('/consumer');
+        await expect(page.getByRole('button', { name: /Tap NFC/i })).toBeVisible();
+        return 'Consumer identify screen is visible';
+      });
+
+      await step('Start scan and hide tab', 'The scan overlay should close when the tab is hidden', async () => {
+        await page.getByTestId('consumer-tap-nfc').click();
+        await expect(page.getByText('Ready to Scan')).toBeVisible();
+        await setPageHidden(page);
+        await expect(page.getByText('Ready to Scan')).toHaveCount(0);
+        await expect(page.getByTestId('consumer-tap-nfc')).toBeVisible();
+        return 'Consumer scan overlay dismissed after tab hide';
       });
     });
   });
@@ -245,6 +307,47 @@ test.describe('TapCup simulator', () => {
     });
   });
 
+  test('shop: tap NFC auto-dismisses when the tab becomes hidden', async ({ page }, testInfo) => {
+    await seedVisibilityController(page);
+    await seedSavedPersonalId(page, SIMULATOR_PRIMARY_PROFILE.nfc_id);
+
+    await runScenario(testInfo, page, 'shop tap nfc auto dismisses when tab becomes hidden', async ({ step }) => {
+      await step('Open shop page', 'Shop scan view should render', async () => {
+        await page.goto('/shop');
+        await expect(page.getByRole('button', { name: /Tap NFC/i })).toBeVisible();
+        return 'Shop scan view loaded';
+      });
+
+      await step('Start scan and hide tab', 'The scan overlay should close when the tab is hidden', async () => {
+        await page.getByTestId('shop-tap-nfc').click();
+        await expect(page.getByText('Ready to Scan')).toBeVisible();
+        await setPageHidden(page);
+        await expect(page.getByText('Ready to Scan')).toHaveCount(0);
+        await expect(page.getByTestId('shop-tap-nfc')).toBeVisible();
+        return 'Shop scan overlay dismissed after tab hide';
+      });
+    });
+  });
+
+  test('shop: root chip link opens the shop flow when a shop session is remembered', async ({ page }, testInfo) => {
+    await seedVisibilityController(page);
+    await seedRememberedShopSession(page);
+
+    await runScenario(testInfo, page, 'shop root chip link opens shop flow when session is remembered', async ({ step }) => {
+      await step('Open root chip link', 'The root chip link should redirect into the shop route instead of consumer', async () => {
+        await page.goto(`/?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await expect(page).toHaveURL(new RegExp(`/shop\\?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`));
+        return `Redirected into shop route for ${SIMULATOR_PRIMARY_PROFILE.nfc_id}`;
+      });
+
+      await step('Resolve customer from redirected route', 'The redirected shop route should open the customer profile automatically', async () => {
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        await expect(page.getByText(SIMULATOR_PRIMARY_PREFERENCE.name)).toBeVisible();
+        return `Opened shop customer profile for ${SIMULATOR_PRIMARY_PROFILE.display_name}`;
+      });
+    });
+  });
+
   test('shop: manual phone lookup resolves customer', async ({ page }, testInfo) => {
     await runScenario(testInfo, page, 'shop manual phone lookup resolves customer', async ({ step }) => {
       await step('Open shop page', 'Shop scan view should render', async () => {
@@ -264,6 +367,7 @@ test.describe('TapCup simulator', () => {
   });
 
   test('shop: tap NFC without saved chip id keeps the scan overlay open until closed', async ({ page }, testInfo) => {
+    await seedVisibilityController(page);
     await runScenario(testInfo, page, 'shop tap nfc without saved chip id keeps the scan overlay open', async ({ step }) => {
       await step('Open shop page', 'Shop scan view should render', async () => {
         await page.goto('/shop');
@@ -290,6 +394,7 @@ test.describe('TapCup simulator', () => {
   });
 
   test('shop: log order from the customer profile', async ({ page }, testInfo) => {
+    await seedVisibilityController(page);
     await seedSavedPersonalId(page, SIMULATOR_PRIMARY_PROFILE.nfc_id);
 
     await runScenario(testInfo, page, 'shop log order from customer profile', async ({ step }) => {
@@ -311,11 +416,9 @@ test.describe('TapCup simulator', () => {
         await page.getByRole('button', { name: /^Order$/ }).click();
         await expect(page.getByRole('heading', { name: /Add Order/i })).toBeVisible();
         await page.getByPlaceholder('e.g. Extra shot added').fill('Extra hot, oat milk');
-        await page.getByPlaceholder('4.50').fill('5.25');
         await page.getByRole('button', { name: /Log Order/i }).click();
         await page.getByRole('button', { name: /History/i }).click();
         await expect(page.getByText('Extra hot, oat milk')).toBeVisible();
-        await expect(page.getByText('$5.25')).toBeVisible();
         return 'Logged an order and verified it in order history';
       });
     });

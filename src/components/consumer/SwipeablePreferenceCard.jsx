@@ -1,12 +1,15 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Edit2, Star, Copy, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import PreferenceCard from "./PreferenceCard";
 import CoffeeCupSvg from "./CoffeeCupSvg";
 
-const SWIPE_THRESHOLD = 60;
+const SWIPE_THRESHOLD = 80;
 const LONG_PRESS_MS   = 500;
+const CANCEL_MOVEMENT = 15;
 
 export default function SwipeablePreferenceCard({
   pref,
@@ -14,14 +17,30 @@ export default function SwipeablePreferenceCard({
   onSetDefault,
   onDelete,
   onDuplicate,
-  dragHandleProps,
 }) {
-  const [expanded, setExpanded]           = useState(false);
+  const [expanded, setExpanded]                   = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showOverlay, setShowOverlay]     = useState(false);
-  const longPressTimer                    = useRef(null);
-  const dragStartX                        = useRef(null);
-  const wasDragged                        = useRef(false);
+  const [showOverlay, setShowOverlay]             = useState(false);
+  const longPressTimer                            = useRef(null);
+  const dragStartX                                = useRef(null);
+  const wasDragged                                = useRef(false);
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: pref.id });
+
+  const sortableStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : "auto",
+  };
+
+  // Auto-dismiss long-press overlay after 3 seconds
+  useEffect(() => {
+    if (!showOverlay) return;
+    const t = setTimeout(() => setShowOverlay(false), 3000);
+    return () => clearTimeout(t);
+  }, [showOverlay]);
 
   const layers = {
     coffee: pref.coffee_pct || 0,
@@ -31,7 +50,6 @@ export default function SwipeablePreferenceCard({
   };
   const hasLayerData = Object.values(layers).some(v => v > 0);
 
-  // Long press detection
   function handlePointerDown(e) {
     if (e.button && e.button !== 0) return;
     dragStartX.current = e.clientX ?? e.touches?.[0]?.clientX;
@@ -45,7 +63,7 @@ export default function SwipeablePreferenceCard({
   function handlePointerMove(e) {
     if (longPressTimer.current === null) return;
     const x = e.clientX ?? e.touches?.[0]?.clientX;
-    if (x !== undefined && Math.abs(x - dragStartX.current) > 8) {
+    if (x !== undefined && Math.abs(x - dragStartX.current) > CANCEL_MOVEMENT) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
       wasDragged.current = true;
@@ -82,7 +100,11 @@ export default function SwipeablePreferenceCard({
 
   return (
     <>
-      <div className="relative">
+      <div
+        ref={setNodeRef}
+        style={sortableStyle}
+        className={`relative transition-shadow ${isDragging ? "shadow-2xl ring-2 ring-primary/20" : ""}`}
+      >
         {/* Background action hints */}
         <div className="absolute inset-0 rounded-2xl flex items-center justify-between px-5 pointer-events-none">
           <div className="flex items-center gap-2 text-white bg-amber-500 px-3 py-1.5 rounded-xl text-xs font-semibold">
@@ -93,23 +115,21 @@ export default function SwipeablePreferenceCard({
           </div>
         </div>
 
-        {/* Drag grip for DnD reorder */}
-        {dragHandleProps && (
-          <div
-            {...dragHandleProps}
-            className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center z-10 cursor-grab active:cursor-grabbing"
-            style={{ touchAction: "none" }}
-            onPointerDown={e => e.stopPropagation()}
-          >
-            <div className="flex flex-col gap-0.5">
-              <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
-              <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
-              <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
-            </div>
+        {/* Drag grip — only this element gets dnd-kit listeners */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center z-10 cursor-grab active:cursor-grabbing"
+          style={{ touchAction: "none" }}
+        >
+          <div className="flex flex-col gap-[3px]">
+            <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
+            <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
+            <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
           </div>
-        )}
+        </div>
 
-        {/* Swipeable card */}
+        {/* Swipeable card body — no dnd-kit listeners here */}
         <motion.div
           drag="x"
           dragConstraints={{ left: -90, right: 90 }}
@@ -119,8 +139,8 @@ export default function SwipeablePreferenceCard({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onClick={handleTap}
-          className={dragHandleProps ? "pl-8" : ""}
-          style={{ cursor: "pointer", userSelect: "none" }}
+          className="pl-8"
+          style={{ cursor: "pointer", userSelect: "none", touchAction: "pan-y" }}
         >
           <PreferenceCard
             pref={pref}
@@ -141,7 +161,7 @@ export default function SwipeablePreferenceCard({
               onClick={() => setShowOverlay(false)}
             >
               {[
-                { icon: Edit2,  label: "Edit",      action: onEdit,      color: "text-foreground" },
+                { icon: Edit2,  label: "Edit",      action: onEdit,       color: "text-foreground" },
                 { icon: Star,   label: "Default",   action: onSetDefault, color: "text-amber-600" },
                 { icon: Copy,   label: "Duplicate", action: onDuplicate,  color: "text-primary" },
                 { icon: Trash2, label: "Delete",    action: () => setShowDeleteConfirm(true), color: "text-destructive" },

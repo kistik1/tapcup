@@ -1,4 +1,18 @@
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { useState, useEffect, useRef } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { base44 } from "@/api/base44Client";
 import SwipeablePreferenceCard from "./SwipeablePreferenceCard";
 
@@ -12,6 +26,18 @@ export default function PreferenceList({
   onAdd,
   onReorder,
 }) {
+  const [localPrefs, setLocalPrefs] = useState(preferences);
+  const persistRef = useRef(null);
+
+  useEffect(() => {
+    if (!persistRef.current) setLocalPrefs(preferences);
+  }, [preferences]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  );
+
   async function handleDuplicate(pref) {
     await base44.entities.CoffeePreference.create({
       profile_id:  pref.profile_id,
@@ -31,66 +57,67 @@ export default function PreferenceList({
       foam_pct:    pref.foam_pct,
       vessel:      pref.vessel,
       size:        pref.size,
-      sort_order:  preferences.length + 1,
+      sort_order:  localPrefs.length + 1,
     });
     onReorder?.();
   }
 
-  async function handleDragEnd(result) {
-    if (!result.destination) return;
-    const fromIdx = result.source.index;
-    const toIdx   = result.destination.index;
-    if (fromIdx === toIdx) return;
+  function handleDragEnd({ active, over }) {
+    if (!over || active.id === over.id) return;
+    const oldIdx = localPrefs.findIndex(p => p.id === active.id);
+    const newIdx = localPrefs.findIndex(p => p.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
 
-    const reordered = Array.from(preferences);
-    const [moved]   = reordered.splice(fromIdx, 1);
-    reordered.splice(toIdx, 0, moved);
+    const reordered = arrayMove(localPrefs, oldIdx, newIdx);
+    setLocalPrefs(reordered);
 
-    // Persist new sort_order to each affected record
-    await Promise.all(
-      reordered.map((p, i) => base44.entities.CoffeePreference.update(p.id, { sort_order: i + 1 }))
-    );
-    onReorder?.();
+    if (persistRef.current) clearTimeout(persistRef.current);
+    persistRef.current = setTimeout(async () => {
+      persistRef.current = null;
+      try {
+        await Promise.all(
+          reordered.map((p, i) =>
+            base44.entities.CoffeePreference.update(p.id, { sort_order: i + 1 })
+          )
+        );
+      } catch (_) { /* silent rollback via onReorder */ }
+      onReorder?.();
+    }, 300);
   }
 
-  const atLimit = preferences.length >= MAX_PREFS;
+  const atLimit = localPrefs.length >= MAX_PREFS;
 
-  if (preferences.length === 0) return null;
+  if (localPrefs.length === 0) return null;
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <Droppable droppableId="prefs">
-        {provided => (
-          <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-3">
-            {preferences.map((pref, index) => (
-              <Draggable key={pref.id} draggableId={pref.id} index={index}>
-                {(draggableProvided) => (
-                  <div
-                    ref={draggableProvided.innerRef}
-                    {...draggableProvided.draggableProps}
-                  >
-                    <SwipeablePreferenceCard
-                      pref={pref}
-                      onEdit={() => onEdit?.(pref)}
-                      onSetDefault={() => onSetDefault?.(pref)}
-                      onDelete={() => onDelete?.(pref)}
-                      onDuplicate={atLimit ? undefined : () => handleDuplicate(pref)}
-                      dragHandleProps={draggableProvided.dragHandleProps}
-                    />
-                  </div>
-                )}
-              </Draggable>
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={localPrefs.map(p => p.id)} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col gap-3">
+            {localPrefs.map(pref => (
+              <SwipeablePreferenceCard
+                key={pref.id}
+                pref={pref}
+                onEdit={() => onEdit?.(pref)}
+                onSetDefault={() => onSetDefault?.(pref)}
+                onDelete={() => onDelete?.(pref)}
+                onDuplicate={atLimit ? undefined : () => handleDuplicate(pref)}
+              />
             ))}
-            {provided.placeholder}
           </div>
-        )}
-      </Droppable>
+        </SortableContext>
+      </DndContext>
 
       {atLimit && (
         <p className="text-xs text-muted-foreground text-center mt-4 px-4 py-2 bg-muted rounded-xl">
           You've reached the 5-preference limit. Remove one to add another.
         </p>
       )}
-    </DragDropContext>
+    </>
   );
 }

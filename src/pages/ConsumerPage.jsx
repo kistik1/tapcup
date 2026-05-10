@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus, Star, LogOut, Share2 } from "lucide-react";
+import { ArrowLeft, Plus, Star, LogOut, Share2, Pencil, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import IdentifyScreen from "@/components/consumer/IdentifyScreen";
@@ -30,6 +30,15 @@ export default function ConsumerPage() {
   const [tab, setTab] = useState("prefs"); // prefs | history
   const [showReplacementModal, setShowReplacementModal] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [shopFilter, setShopFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [reorderInitialValues, setReorderInitialValues] = useState(null);
 
   useEffect(() => {
     setCachedRoleContext("consumer", "/consumer");
@@ -163,6 +172,70 @@ export default function ConsumerPage() {
     />
   );
 
+  function nfcIdToColorClass(nfcId) {
+    if (!nfcId) return "bg-amber-600";
+    let h = 0;
+    for (let i = 0; i < nfcId.length; i++) h = nfcId.charCodeAt(i) + ((h << 5) - h);
+    const palette = ["bg-amber-600","bg-violet-600","bg-teal-600","bg-rose-600","bg-sky-600","bg-lime-600"];
+    return palette[Math.abs(h) % palette.length];
+  }
+
+  function getInitials(name) {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    return parts.length === 1 ? parts[0][0].toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function mostFrequent(arr) {
+    const counts = {};
+    let max = 0, result = null;
+    for (const v of arr) {
+      if (!v) continue;
+      counts[v] = (counts[v] || 0) + 1;
+      if (counts[v] > max) { max = counts[v]; result = v; }
+    }
+    return result;
+  }
+
+  async function handleSaveName() {
+    if (!nameInput.trim()) return;
+    setSavingName(true);
+    try {
+      await base44.entities.CoffeeProfile.update(profile.id, { display_name: nameInput.trim() });
+      setProfile(p => ({ ...p, display_name: nameInput.trim() }));
+      setEditingName(false);
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function handleSavePhone() {
+    setSavingPhone(true);
+    try {
+      await base44.entities.CoffeeProfile.update(profile.id, { phone: phoneInput.trim() });
+      setProfile(p => ({ ...p, phone: phoneInput.trim() }));
+      setEditingPhone(false);
+    } finally {
+      setSavingPhone(false);
+    }
+  }
+
+  function handleReorder(snapshot) {
+    setReorderInitialValues(snapshot);
+    setEditingPref(null);
+    setShowPrefForm(true);
+  }
+
+  const uniqueShops = [...new Set(orders.map(o => o.shop_name).filter(Boolean))];
+  const now = Date.now();
+  const filteredOrders = orders.filter(o => {
+    if (shopFilter && o.shop_name !== shopFilter) return false;
+    if (dateFilter === "7") return new Date(o.ordered_at || o.created_date).getTime() >= now - 7 * 86400000;
+    if (dateFilter === "30") return new Date(o.ordered_at || o.created_date).getTime() >= now - 30 * 86400000;
+    return true;
+  });
+  const favDrink = mostFrequent(orders.map(o => o.preference_snapshot?.name ?? o.preference_snapshot?.coffee_type));
+
   const defaultPref = preferences.find(p => p.is_default);
   const otherPrefs = preferences.filter(p => !p.is_default);
 
@@ -174,7 +247,7 @@ export default function ConsumerPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="text-center">
-          <p data-testid="consumer-profile-display-name" className="font-semibold text-sm">{profile.display_name}</p>
+          <p className="font-semibold text-sm">{profile.display_name}</p>
           <div className="flex items-center justify-center gap-1.5 mt-0.5">
             <span
               data-testid="consumer-chip-status-badge"
@@ -217,7 +290,7 @@ export default function ConsumerPage() {
           <DialogHeader>
             <DialogTitle>Request Chip Replacement</DialogTitle>
             <DialogDescription>
-              Visit any participating TapCup shop and ask a staff member to re-program a new chip to your profile.
+              Visit any participating TapCup shop and ask the shop team to re-program a new chip to your profile.
               They will generate a new ID and assign it — your preferences and order history stay intact.
             </DialogDescription>
           </DialogHeader>
@@ -226,19 +299,85 @@ export default function ConsumerPage() {
       </Dialog>
 
       <div className="max-w-lg mx-auto px-4 pb-24">
-        {profile.nfc_id && (
-          <div className="flex items-center justify-between px-1 mt-4 mb-1">
-            <span className="text-xs text-muted-foreground font-mono">
-              ID: NFC-••••{profile.nfc_id.slice(-4)}
-            </span>
-            <button
-              onClick={() => setShowReplacementModal(true)}
-              className="text-xs text-amber-700 underline underline-offset-2"
-            >
-              Request Replacement
-            </button>
+        {/* Profile card */}
+        <div className="bg-card border border-border rounded-2xl p-4 mt-4 mb-2">
+          <div className="flex items-start gap-3">
+            <div className={`w-12 h-12 rounded-full ${nfcIdToColorClass(profile.nfc_id)} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
+              {getInitials(profile.display_name)}
+            </div>
+            <div className="flex-1 min-w-0">
+              {/* Inline name edit */}
+              <div className="group flex items-center gap-1.5 mb-1.5">
+                {editingName ? (
+                  <>
+                    <input
+                      autoFocus
+                      className="text-sm font-semibold bg-transparent border-b border-primary outline-none flex-1 min-w-0"
+                      value={nameInput}
+                      onChange={e => setNameInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") setEditingName(false); }}
+                      data-testid="consumer-profile-name-input"
+                    />
+                    <button onClick={handleSaveName} disabled={savingName} className="text-emerald-600 text-xs font-medium">
+                      {savingName ? "…" : "Save"}
+                    </button>
+                    <button onClick={() => setEditingName(false)} className="text-muted-foreground text-xs">Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <span data-testid="consumer-profile-display-name" className="text-sm font-semibold">{profile.display_name}</span>
+                    <button
+                      onClick={() => { setNameInput(profile.display_name || ""); setEditingName(true); }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground p-0.5"
+                      aria-label="Edit name"
+                      data-testid="consumer-profile-name-edit-btn"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {/* Inline phone edit */}
+              <div className="group flex items-center gap-1.5">
+                <Phone className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                {editingPhone ? (
+                  <>
+                    <input
+                      autoFocus
+                      type="tel"
+                      className="text-xs bg-transparent border-b border-primary outline-none flex-1 min-w-0"
+                      value={phoneInput}
+                      onChange={e => setPhoneInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleSavePhone(); if (e.key === "Escape") setEditingPhone(false); }}
+                      placeholder="+1234567890"
+                      data-testid="consumer-profile-phone-input"
+                    />
+                    <button onClick={handleSavePhone} disabled={savingPhone} className="text-emerald-600 text-xs font-medium">
+                      {savingPhone ? "…" : "Save"}
+                    </button>
+                    <button onClick={() => setEditingPhone(false)} className="text-muted-foreground text-xs">Cancel</button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => { setPhoneInput(profile.phone || ""); setEditingPhone(true); }}
+                    className="text-xs text-muted-foreground group-hover:text-foreground transition-colors text-left"
+                    data-testid="consumer-profile-phone"
+                  >
+                    {profile.phone || <span className="italic text-muted-foreground/60">Add phone</span>}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        )}
+          {profile.nfc_id && (
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+              <span className="text-xs text-muted-foreground font-mono">ID: NFC-••••{profile.nfc_id.slice(-4)}</span>
+              <button onClick={() => setShowReplacementModal(true)} className="text-xs text-amber-700 underline underline-offset-2">
+                Request Replacement
+              </button>
+            </div>
+          )}
+        </div>
         {/* Tabs */}
         <div className="flex gap-1 mt-5 mb-6 bg-muted rounded-xl p-1">
           {[["prefs", "My Coffees"], ["history", "History"]].map(([key, label]) => (
@@ -307,7 +446,42 @@ export default function ConsumerPage() {
         )}
 
         {tab === "history" && (
-          <OrderHistoryList orders={orders} preferences={preferences} />
+          <div>
+            {/* Stats bar */}
+            {orders.length > 0 && (
+              <p className="text-xs text-muted-foreground mb-3" data-testid="consumer-order-stats">
+                {orders.length} {orders.length === 1 ? "order" : "orders"}
+                {favDrink ? ` · Favourite: ${favDrink}` : ""}
+              </p>
+            )}
+            {/* Filters */}
+            {(uniqueShops.length > 1 || orders.length > 0) && (
+              <div className="flex gap-2 mb-4">
+                {uniqueShops.length > 0 && (
+                  <select
+                    value={shopFilter}
+                    onChange={e => setShopFilter(e.target.value)}
+                    className="flex-1 text-xs rounded-xl border border-border bg-background px-3 py-2 text-foreground"
+                    data-testid="consumer-filter-shop"
+                  >
+                    <option value="">All shops</option>
+                    {uniqueShops.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                )}
+                <select
+                  value={dateFilter}
+                  onChange={e => setDateFilter(e.target.value)}
+                  className="flex-1 text-xs rounded-xl border border-border bg-background px-3 py-2 text-foreground"
+                  data-testid="consumer-filter-date"
+                >
+                  <option value="all">All time</option>
+                  <option value="7">Last 7 days</option>
+                  <option value="30">Last 30 days</option>
+                </select>
+              </div>
+            )}
+            <OrderHistoryList orders={filteredOrders} preferences={preferences} onReorder={handleReorder} />
+          </div>
         )}
       </div>
 
@@ -316,7 +490,8 @@ export default function ConsumerPage() {
         <PreferenceFormStepper
           profile={profile}
           editing={editingPref}
-          onClose={() => { setShowPrefForm(false); setEditingPref(null); }}
+          initialValues={reorderInitialValues}
+          onClose={() => { setShowPrefForm(false); setEditingPref(null); setReorderInitialValues(null); }}
           onSaved={() => loadProfileData(profile)}
         />
       )}

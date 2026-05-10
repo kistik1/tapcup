@@ -5,7 +5,7 @@ TapCup is a Base44 coffee experience with three primary roles:
 
 - Consumer: a customer manages their coffee profile, preferences, and order history.
 - Shop: a coffee shop identifies a customer and logs an order.
-- Admin: a privileged operator manages consumers, shops, roles, and system statistics.
+- Admin: a privileged operator manages consumers, shops, shared shop credentials, and system statistics.
 
 The product uses NFC-inspired identity, but the web app does not depend on real browser NFC scanning as the primary production path. Instead, a chip opens a canonical TapCup URL that carries a unique personal ID, the app saves state, and navigation is driven by URL redirect plus cached role context.
 
@@ -48,7 +48,7 @@ Use the base URL as the canonical starting point for identity handoff, page rout
 TapCup needs a simple flow for adding a new NFC chip to the app.
 
 ### Setup flow
-1. An admin or shop staff opens the chip setup flow.
+1. An admin or shop opens the chip setup flow.
 2. The app creates or assigns a new unique `personal_id`.
 3. The app builds a canonical URL such as `https://tap-cup.base44.app/?personal_id=ABC123`.
 4. The chip is associated with that canonical URL in the app.
@@ -81,7 +81,7 @@ TapCup separates access by role.
 ### Admin
 - Can view consumers
 - Can manage shops: add, edit, remove
-- Can manage staff access and roles
+- Can manage shops and shared shop credentials
 - Can view statistics and usage trends
 - Cannot silently change consumer-owned profile data without auditability
 
@@ -164,10 +164,10 @@ flowchart LR
 4. If no profile exists, the app prompts to create one.
 
 ### Shop onboarding
-1. Shop staff opens the shop experience.
-2. The app authenticates the user as shop staff or admin.
+1. A shop user opens the shop experience.
+2. The app authenticates the user with the shop's shared username and password.
 3. The app loads the shop lookup tools only.
-4. Staff can search by NFC ID or phone.
+4. The shop can search by NFC ID or phone.
 5. The app shows the customer profile summary and order actions.
 6. The shop user cannot edit consumer preferences or identity fields.
 
@@ -201,7 +201,7 @@ flowchart LR
 ### Admin management
 1. Admin opens the admin panel.
 2. The app lists consumers, shops, and high-level statistics.
-3. Admin updates shop records or staff access as needed.
+3. Admin updates shop records and shared shop credentials as needed.
 4. The app logs administrative changes for auditability.
 
 ## Functional Requirements

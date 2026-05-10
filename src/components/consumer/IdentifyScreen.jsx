@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CreateProfilePrompt from "@/components/consumer/CreateProfilePrompt";
 import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
+import useAutoDismissOnHidden from "@/components/shared/use-auto-dismiss-on-hidden";
 import { getSavedPersonalId, setSavedPersonalId } from "@/lib/personal-id";
 
 export default function IdentifyScreen({ onIdentified }) {
@@ -19,6 +20,7 @@ export default function IdentifyScreen({ onIdentified }) {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const [createSeed, setCreateSeed] = useState(null);
+  const [scanInProgress, setScanInProgress] = useState(false);
   const scanTimerRef = useRef(null);
 
   function clearScanTimer() {
@@ -67,15 +69,18 @@ export default function IdentifyScreen({ onIdentified }) {
     setScanMessage("Waiting for NFC scan...");
     setScanVisible(true);
     setNfcLoading(true);
+    setScanInProgress(true);
 
     scanTimerRef.current = window.setTimeout(() => {
       const savedPersonalId = getSavedPersonalId();
       if (!savedPersonalId) {
         setScanMessage("No saved chip ID yet. Tap X to exit or use phone/manual NFC ID below.");
+        setScanInProgress(false);
         return;
       }
 
       setScanMessage("NFC detected. Redirecting...");
+      setScanInProgress(false);
       navigate(`/consumer?personal_id=${encodeURIComponent(savedPersonalId)}`, { replace: true });
     }, 20000);
   }
@@ -96,7 +101,10 @@ export default function IdentifyScreen({ onIdentified }) {
     setScanVisible(false);
     setScanMessage("");
     setNfcLoading(false);
+    setScanInProgress(false);
   }
+
+  useAutoDismissOnHidden(scanInProgress, closeScanOverlay);
 
   useEffect(() => {
     return () => {

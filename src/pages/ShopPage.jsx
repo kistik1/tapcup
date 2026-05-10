@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CustomerProfileView from "@/components/shop/CustomerProfileView";
 import NfcScanOverlay from "@/components/shared/NfcScanOverlay";
+import useAutoDismissOnHidden from "@/components/shared/use-auto-dismiss-on-hidden";
 import ShopLoginGate from "@/components/shop/ShopLoginGate";
 import { assignChipToProfile } from "@/lib/chip-assignment";
 import { buildCanonicalChipUrl, generatePersonalId, getSavedPersonalId, setCachedRoleContext, setSavedPersonalId } from "@/lib/personal-id";
@@ -15,27 +16,25 @@ import { isSimulatorMode } from "@/lib/simulator/runtime";
 export default function ShopPage() {
   return (
     <ShopLoginGate>
-      {({ shop, onShopUpdated, onSignOut }) => (
-        <ShopExperience shop={shop} onShopUpdated={onShopUpdated} onSignOut={onSignOut} />
+      {({ shop, onSignOut }) => (
+        <ShopExperience shop={shop} onSignOut={onSignOut} />
       )}
     </ShopLoginGate>
   );
 }
 
-function ShopExperience({ shop, onShopUpdated, onSignOut }) {
+function ShopExperience({ shop, onSignOut }) {
   const [searchParams] = useSearchParams();
   const personalId = searchParams.get("personal_id");
   const [manualInput, setManualInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
-  const [usernameInput, setUsernameInput] = useState(shop?.login_username || "");
-  const [usernameSaving, setUsernameSaving] = useState(false);
-  const [usernameMessage, setUsernameMessage] = useState("");
   const [resolving, setResolving] = useState(false);
   const [scanVisible, setScanVisible] = useState(false);
   const [scanMessage, setScanMessage] = useState("");
   const [phoneSearching, setPhoneSearching] = useState(false);
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState("");
+  const [scanInProgress, setScanInProgress] = useState(false);
   const resolveTimerRef = useRef(null);
 
   const [chipMgmtId, setChipMgmtId] = useState(() => generatePersonalId());
@@ -87,11 +86,13 @@ function ShopExperience({ shop, onShopUpdated, onSignOut }) {
     setError("");
     setScanMessage("Waiting for NFC scan...");
     setScanVisible(true);
+    setScanInProgress(true);
     resolveTimerRef.current = window.setTimeout(async () => {
       try {
         const savedPersonalId = getSavedPersonalId();
         if (!savedPersonalId) {
           setScanMessage("No saved chip ID yet. Tap X to close or use manual NFC ID/phone.");
+          setScanInProgress(false);
           return;
         }
 
@@ -99,8 +100,10 @@ function ShopExperience({ shop, onShopUpdated, onSignOut }) {
         if (result) {
           setScanMessage("NFC detected. Opening customer profile...");
           setScanVisible(false);
+          setScanInProgress(false);
         } else {
           setScanMessage("No customer found. Tap X to close or use manual NFC ID/phone.");
+          setScanInProgress(false);
         }
       } finally {
         resolveTimerRef.current = null;
@@ -175,59 +178,15 @@ function ShopExperience({ shop, onShopUpdated, onSignOut }) {
     }
   }
 
-  async function createAuditLog(action, entityType, entityId, details = {}) {
-    if (!base44.entities.AdminAuditLog) return;
-    await base44.entities.AdminAuditLog.create({
-      actor_role: "shop",
-      action,
-      entity_type: entityType,
-      entity_id: entityId,
-      details,
-      created_at: new Date().toISOString(),
-    });
-  }
-
-  async function handleUsernameUpdate(event) {
-    event.preventDefault();
-    const nextUsername = usernameInput.trim();
-    if (!nextUsername || nextUsername === shop.login_username) return;
-
-    setUsernameSaving(true);
-    setUsernameMessage("");
-    setError("");
-
-    try {
-      const duplicates = await base44.entities.Shop.filter({ login_username: nextUsername });
-      const duplicate = duplicates.find((record) => record.id !== shop.id && record.status !== "inactive");
-      if (duplicate) {
-        setError("That username is already used by another shop.");
-        return;
-      }
-
-      const updatedShop = await base44.entities.Shop.update(shop.id, {
-        login_username: nextUsername,
-        credentials_updated_at: new Date().toISOString(),
-        username_updated_by_role: "shop",
-      });
-      await createAuditLog("shop_update_username", "Shop", shop.id, {
-        previous_username: shop.login_username,
-        next_username: nextUsername,
-      });
-      onShopUpdated(updatedShop);
-      setUsernameMessage("Username updated.");
-    } catch (err) {
-      setError(err?.message || "Unable to update username.");
-    } finally {
-      setUsernameSaving(false);
-    }
-  }
-
   function closeScanOverlay() {
     clearResolveTimer();
     setScanVisible(false);
     setScanMessage("");
     setResolving(false);
+    setScanInProgress(false);
   }
+
+  useAutoDismissOnHidden(scanInProgress, closeScanOverlay);
 
   useEffect(() => {
     setCachedRoleContext("shop", "/shop");
@@ -250,10 +209,12 @@ function ShopExperience({ shop, onShopUpdated, onSignOut }) {
         if (results.length === 0) {
           setCustomer(null);
           setError("No customer found with that personal ID");
+          setScanInProgress(false);
           return;
         }
         setSavedPersonalId(results[0].nfc_id);
         setCustomer(results[0]);
+        setScanInProgress(false);
       } catch (err) {
         if (!cancelled) setError(err?.message || "Unable to resolve personal ID");
       } finally {
@@ -350,33 +311,18 @@ function ShopExperience({ shop, onShopUpdated, onSignOut }) {
             {/* Sidebar: Manual Entry */}
             <div className="md:w-80 border-t md:border-t-0 md:border-l border-border bg-muted/30 p-6 flex flex-col justify-center gap-6">
               {!isSimulatorMode && (
-                <form onSubmit={handleUsernameUpdate} className="rounded-2xl border border-border bg-card p-4">
+                <div className="rounded-2xl border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Settings className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Shop Username</p>
+                    <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Shop Settings</p>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Input
-                      value={usernameInput}
-                      onChange={(event) => {
-                        setUsernameInput(event.target.value);
-                        setUsernameMessage("");
-                      }}
-                      placeholder="Username"
-                      className="h-10 rounded-xl text-sm"
-                      autoComplete="username"
-                    />
-                    <Button
-                      type="submit"
-                      disabled={usernameSaving || !usernameInput.trim() || usernameInput.trim() === shop?.login_username}
-                      variant="outline"
-                      className="h-10 rounded-xl"
-                    >
-                      {usernameSaving ? "Saving..." : "Update Username"}
-                    </Button>
-                  </div>
-                  {usernameMessage && <p className="text-xs text-emerald-700 mt-2">{usernameMessage}</p>}
-                </form>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Manage the shop's shared username and password in Settings.
+                  </p>
+                  <Button asChild variant="outline" className="h-10 rounded-xl w-full">
+                    <Link to="/settings">Open Settings</Link>
+                  </Button>
+                </div>
               )}
 
               {/* NFC ID lookup */}
