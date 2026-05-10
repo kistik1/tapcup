@@ -139,7 +139,7 @@ Requires real Base44-backed mode:
 Current local limitation:
 
 - the simulator mock only covers `CoffeeProfile`, `CoffeePreference`, and `Order`
-- features that depend on `Shop`, `StaffAccess`, `NfcChip`, or `AdminAuditLog` may be incomplete in pure simulator mode
+- features that depend on `Shop`, `NfcChip`, or `AdminAuditLog` may be incomplete in pure simulator mode
 - generated canonical chip URLs still point at `https://tap-cup.base44.app` by design
 
 ## Verification Rules

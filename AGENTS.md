@@ -40,7 +40,7 @@
 - Plain local non-simulator runs depend on valid Base44 app params and auth/bootstrap behavior.
 - Real Base44 auth, hosted publish behavior, and production integration checks still require Base44 runtime validation.
 - The simulator mock only covers `CoffeeProfile`, `CoffeePreference`, and `Order`.
-- Admin and shop-management features that depend on `Shop`, `StaffAccess`, `NfcChip`, or `AdminAuditLog` may be incomplete locally and must be validated in real Base44-backed mode before release.
+- Admin and shop-management features that depend on `Shop`, `NfcChip`, or `AdminAuditLog` may be incomplete locally and must be validated in real Base44-backed mode before release.
 - Generated canonical chip URLs still point to `https://tap-cup.base44.app` by design.
 
 ## Release Sequence

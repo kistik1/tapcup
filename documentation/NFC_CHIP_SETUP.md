@@ -16,7 +16,7 @@ Add a new chip so it can:
 ## Who Can Do It
 
 - `admin`
-- `shop` staff with chip setup permission
+- `shop`
 
 Consumers should not normally provision chips for other users.
 

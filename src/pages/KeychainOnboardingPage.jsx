@@ -13,7 +13,7 @@ const STEPS = [
   {
     icon: MapPin,
     title: "Bring it to a TapCup shop",
-    description: "Visit any participating TapCup location and ask a staff member to program your keychain chip.",
+    description: "Visit any participating TapCup location and ask the shop team to program your keychain chip.",
     color: "text-amber-600",
     bg: "bg-amber-50",
   },

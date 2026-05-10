@@ -29,7 +29,7 @@ Seed data for the in-memory simulator. Use these credentials and IDs when testin
 | TapCup Roasters | `tap` | `tap1` | Simulator only — auto-loaded, login form is skipped |
 | Bean There Café | `bean` | `bean1` | Simulator only — auto-loaded, login form is skipped |
 
-> **These credentials do not work on `localhost:7777` or `test-dev.kistik.uk`** — those connect to the real Base44 backend. The mock shops only exist in the in-memory simulator at port 4173. In simulator mode the shop login form is skipped entirely; TapCup Roasters is loaded automatically.
+> **These credentials do not work on `localhost:7777` or `test-dev.kistik.uk`** — those connect to the real Base44 backend. The mock shops only exist in the in-memory simulator at port 4173. In simulator mode the shared shop login is skipped entirely; TapCup Roasters is loaded automatically.
 
 ## Seed Orders
 

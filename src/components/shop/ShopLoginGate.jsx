@@ -3,6 +3,7 @@ import { LockKeyhole, Store } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { clearCachedRoleContext, getCachedRoleContext, setCachedRoleContext } from "@/lib/personal-id";
 import { isSimulatorMode } from "@/lib/simulator/runtime";
 
 const SHOP_SESSION_KEY = "tapcup_shop_session";
@@ -14,11 +15,10 @@ const SIMULATOR_SHOP = {
 
 function getSessionStorage() {
   if (typeof window === "undefined") return null;
-  return window.sessionStorage;
+  return window.localStorage;
 }
 
-function readShopSession() {
-  if (isSimulatorMode) return SIMULATOR_SHOP;
+function readStoredShopSession() {
   const raw = getSessionStorage()?.getItem(SHOP_SESSION_KEY);
   if (!raw) return null;
 
@@ -30,14 +30,31 @@ function readShopSession() {
   }
 }
 
-function writeShopSession(shop) {
+export function readShopSession() {
+  if (isSimulatorMode) return SIMULATOR_SHOP;
+  return readStoredShopSession();
+}
+
+export function hasRememberedShopSession() {
+  return Boolean(readStoredShopSession());
+}
+
+export function writeShopSession(shop) {
   const session = {
     id: shop.id,
     name: shop.name || "Coffee Shop",
     login_username: shop.login_username || "",
   };
   getSessionStorage()?.setItem(SHOP_SESSION_KEY, JSON.stringify(session));
+  setCachedRoleContext("shop", "/shop");
   return session;
+}
+
+export function clearShopSession() {
+  getSessionStorage()?.removeItem(SHOP_SESSION_KEY);
+  if (getCachedRoleContext().role === "shop") {
+    clearCachedRoleContext();
+  }
 }
 
 export default function ShopLoginGate({ children }) {
@@ -52,7 +69,7 @@ export default function ShopLoginGate({ children }) {
       shop: shopSession,
       onShopUpdated: (shop) => setShopSession(writeShopSession(shop)),
       onSignOut: () => {
-        getSessionStorage()?.removeItem(SHOP_SESSION_KEY);
+        clearShopSession();
         setShopSession(null);
       },
     });
@@ -128,7 +145,7 @@ export default function ShopLoginGate({ children }) {
 
         <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
           <Store className="w-3.5 h-3.5" />
-          Credentials are issued by your TapCup admin.
+          These shared shop credentials unlock the full shop app.
         </div>
       </form>
     </div>

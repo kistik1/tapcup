@@ -24,13 +24,6 @@ const emptyShopForm = {
   login_password: "",
   notes: "",
 };
-const emptyStaffForm = {
-  display_name: "",
-  email: "",
-  role: "shop",
-  shop_id: "",
-  can_setup_chips: true,
-};
 
 function entityApi(name) {
   return base44.entities[name];
@@ -51,13 +44,11 @@ export default function AdminPage() {
   const [orders, setOrders] = useState([]);
   const [chips, setChips] = useState([]);
   const [shops, setShops] = useState([]);
-  const [staff, setStaff] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [profileQuery, setProfileQuery] = useState(incomingPersonalId);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [shopForm, setShopForm] = useState(emptyShopForm);
   const [editingShop, setEditingShop] = useState(null);
-  const [staffForm, setStaffForm] = useState(emptyStaffForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -97,21 +88,18 @@ export default function AdminPage() {
         orderRows,
         chipRows,
         shopRows,
-        staffRows,
         auditRows,
       ] = await Promise.all([
         base44.entities.CoffeeProfile.filter({}),
         base44.entities.Order.filter({}),
         entityApi("NfcChip")?.filter({}) || [],
         entityApi("Shop")?.filter({}) || [],
-        entityApi("StaffAccess")?.filter({}) || [],
         entityApi("AdminAuditLog")?.filter({}) || [],
       ]);
       setProfiles(profileRows);
       setOrders(orderRows);
       setChips(chipRows);
       setShops(shopRows);
-      setStaff(staffRows);
       setAuditLogs(auditRows.sort((a, b) => new Date(b.created_at || b.created_date).getTime() - new Date(a.created_at || a.created_date).getTime()));
 
       if (incomingPersonalId) {
@@ -203,31 +191,6 @@ export default function AdminPage() {
     }
   }
 
-  async function saveStaff(event) {
-    event.preventDefault();
-    if (!staffForm.display_name.trim()) return;
-    setSaving(true);
-    try {
-      const created = await entityApi("StaffAccess").create({ ...staffForm, status: "active" });
-      await createAuditLog("create_staff_access", "StaffAccess", created.id, staffForm);
-      setStaffForm(emptyStaffForm);
-      await loadAdminData();
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function deactivateStaff(record) {
-    setSaving(true);
-    try {
-      await entityApi("StaffAccess").update(record.id, { status: "inactive" });
-      await createAuditLog("deactivate_staff_access", "StaffAccess", record.id, { display_name: record.display_name });
-      await loadAdminData();
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function createSeedProfile(event) {
     event.preventDefault();
     if (!newProfile.display_name.trim() || !newProfile.personal_id.trim()) return;
@@ -266,7 +229,7 @@ export default function AdminPage() {
   return (
     <PasswordGate
       title="Admin Access"
-      description="Enter the TapCup admin password to manage chips, shops, staff, and system statistics."
+      description="Enter the TapCup admin password to manage chips, shops, shared shop credentials, and system statistics."
       password={ADMIN_PASSWORD} 
       sessionKey={ADMIN_SESSION_KEY}
     >
@@ -356,6 +319,9 @@ export default function AdminPage() {
                 </Panel>
 
                 <Panel title="Shop Management" icon={Store}>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Each shop has one shared username and password. Anyone at that shop can use the full shop app with those credentials.
+                  </p>
                   <form onSubmit={saveShop} className="grid md:grid-cols-2 gap-3 mb-4">
                     <Input value={shopForm.name} onChange={(event) => setShopForm((form) => ({ ...form, name: event.target.value }))} placeholder="Shop name" className="h-11 rounded-xl" />
                     <Input value={shopForm.phone} onChange={(event) => setShopForm((form) => ({ ...form, phone: event.target.value }))} placeholder="Phone" className="h-11 rounded-xl" />
@@ -403,45 +369,6 @@ export default function AdminPage() {
                     <p className="text-sm text-muted-foreground">Select a consumer to assign or reassign a chip.</p>
                   </Panel>
                 )}
-
-                <Panel title="Staff Access" icon={Users}>
-                  <form onSubmit={saveStaff} className="space-y-3 mb-4">
-                    <Input value={staffForm.display_name} onChange={(event) => setStaffForm((form) => ({ ...form, display_name: event.target.value }))} placeholder="Staff name" className="h-10 rounded-xl" />
-                    <Input value={staffForm.email} onChange={(event) => setStaffForm((form) => ({ ...form, email: event.target.value }))} placeholder="Email" className="h-10 rounded-xl" />
-                    <select
-                      value={staffForm.shop_id}
-                      onChange={(event) => setStaffForm((form) => ({ ...form, shop_id: event.target.value }))}
-                      className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
-                    >
-                      <option value="">No shop assigned</option>
-                      {shops.filter((shop) => shop.status !== "inactive").map((shop) => (
-                        <option key={shop.id} value={shop.id}>{shop.name}</option>
-                      ))}
-                    </select>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={staffForm.can_setup_chips}
-                        onChange={(event) => setStaffForm((form) => ({ ...form, can_setup_chips: event.target.checked }))}
-                      />
-                      Can setup chips
-                    </label>
-                    <Button type="submit" disabled={saving || !staffForm.display_name.trim()} className="w-full h-10 rounded-xl">
-                      Add Staff
-                    </Button>
-                  </form>
-                  <div className="space-y-2">
-                    {staff.map((record) => (
-                      <RecordRow
-                        key={record.id}
-                        title={record.display_name}
-                        detail={`${record.role} · ${record.can_setup_chips ? "chip setup" : "lookup only"} · ${record.status || "active"}`}
-                        inactive={record.status === "inactive"}
-                        onDeactivate={() => deactivateStaff(record)}
-                      />
-                    ))}
-                  </div>
-                </Panel>
 
                 <Panel title="Audit Log" icon={BarChart3}>
                   <div className="space-y-2 max-h-80 overflow-y-auto">

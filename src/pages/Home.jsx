@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Coffee, Shield, Wifi } from "lucide-react";
+import { Coffee, Shield, ShoppingBasket, Wifi } from "lucide-react";
 import { getCachedRoleContext, getRouteForPersonalId, setSavedPersonalId } from "@/lib/personal-id";
+import { hasRememberedShopSession } from "@/components/shop/ShopLoginGate";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -13,6 +14,10 @@ export default function Home() {
   useEffect(() => {
     if (!personalId) return;
     setSavedPersonalId(personalId);
+    if (hasRememberedShopSession()) {
+      navigate(getRouteForPersonalId(personalId, "shop"), { replace: true });
+      return;
+    }
     const { role } = getCachedRoleContext();
     navigate(getRouteForPersonalId(personalId, role), { replace: true });
   }, [navigate, personalId]);
@@ -50,6 +55,17 @@ export default function Home() {
       textColor: "text-slate-50",
       bg: "bg-slate-900/10 hover:bg-slate-900/20",
       border: "border-slate-300 hover:border-slate-500",
+    },
+    {
+      id: "keychains",
+      icon: ShoppingBasket,
+      label: "Keychain Sales",
+      sub: "Browse and buy TapCup keychains",
+      href: "/keychains",
+      color: "from-rose-800 to-orange-600",
+      textColor: "text-rose-50",
+      bg: "bg-rose-900/10 hover:bg-rose-900/20",
+      border: "border-rose-200 hover:border-rose-400",
     },
   ];
 
@@ -128,19 +144,6 @@ export default function Home() {
         Chip-linked coffee ordering
       </motion.p>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.95 }}
-        className="mt-4"
-      >
-        <Link
-          to="/keychains"
-          className="text-xs font-medium uppercase tracking-[0.28em] text-primary transition hover:text-primary/80"
-        >
-          View keychain sales page
-        </Link>
-      </motion.div>
     </div>
   );
 }

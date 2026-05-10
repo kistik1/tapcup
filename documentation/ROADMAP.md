@@ -14,7 +14,7 @@
 - [x] Default preference selection
 - [x] Order history list
 - [x] Shop: customer lookup + order logging
-- [x] Admin: consumer/shop management, staff access
+- [x] Admin: consumer/shop management and shared shop credentials
 - [x] Per-shop username/password auth
 - [x] Keychain sales landing page (`/keychains`)
 - [x] Chip assignment logic + audit log (`chip-assignment.js`)
@@ -31,7 +31,7 @@
 > The shop generates the ID, writes the URL to the chip, and assigns it to a consumer profile.  
 > `ProfileChipSetup` and `chip-assignment.js` have the assignment logic — the shop chip management UI and consumer chip status view are missing.
 
-### 1.1 Shop — Chip Management Panel
+### ✅ 1.1 Shop — Chip Management Panel
 - Dedicated section in the shop view for chip operations
 - Generate a new unique `personal_id` (one tap)
 - Display the canonical URL to write to the chip via the shop's NFC writer
@@ -40,13 +40,13 @@
 - Handle chip conflict (chip already assigned) with reassignment confirmation
 - `ProfileChipSetup` must work in simulator mode (currently returns `null`)
 
-### 1.2 Post-Purchase Onboarding (Consumer-Facing)
+### ✅ 1.2 Post-Purchase Onboarding (Consumer-Facing)
 - `/keychains` → Stripe checkout → success page
 - Instructs buyer to bring the keychain to a participating shop for chip programming
 - Shows nearby shops (or contact info) so they know where to go
 - Consumer taps the programmed chip → app opens → profile loads → ready
 
-### 1.3 Consumer — Chip Status in Profile
+### ✅ 1.3 Consumer — Chip Status in Profile
 - Show chip status on the profile header: **Linked / Unlinked**
 - If linked: display masked chip ID and "Request Replacement" option
 - Replacement flow: consumer requests via app → shop re-programs a new chip and reassigns
@@ -58,41 +58,47 @@
 
 > This is the core consumer action. It must feel fast, visual, and intuitive on mobile.
 
-### 2.1 Preference Card — Visual Cup Preview
+### ✅ 2.1 Preference Card — Visual Cup Preview
 - Each `PreferenceCard` renders a live mini SVG cup showing actual layer proportions
 - Layer colors match the full editor (foam / milk / water / coffee)
 - Barista reads the drink without reading text
 
-### 2.2 Preference Form — Mobile-First Step Flow
+### ✅ 2.2 Preference Form — Mobile-First Step Flow
 - **Current:** Full-screen modal, single long form. `PreferenceForm.jsx` is 25KB.
 - **Goal:** Step-by-step, one decision per screen, thumb-friendly.
   - Step 1: Pick vessel + size (visual grid)
   - Step 2: Adjust layers with drag editor
   - Step 3: Milk, sugar, temperature (large tap targets)
-  - Step 4: Name + notes + save
+  - Step 4: Name + notes + save (including optional photo)
 - Progress indicator, back/forward navigation
 - Auto-save draft on close
 
-### 2.3 Preference Card — Quick Actions
+### ✅ 2.3 Preference Card — Quick Actions
 - Swipe left → delete (with confirm)
 - Swipe right → set as default
 - Long press → quick edit overlay
 - Tap → expand details before opening editor
 
-### 2.4 Preference List — Reorder + Duplicate
+### ✅ 2.4 Preference List — Reorder + Duplicate
 - Drag-to-reorder saved preferences
 - One-tap duplicate ("same as usual but iced")
 - Soft limit: 5 preferences, with clear UI feedback at limit
 
-### 2.5 Empty State — First-Run Onboarding
+### ✅ 2.5 Empty State — First-Run Onboarding
 - Animated coffee cup illustration
 - Single clear CTA: "Create My First Order"
 - Editor opens pre-filled with sensible defaults
 
-### 2.6 Share My Order
+### ✅ 2.6 Share My Order
 - Consumer generates a QR code or short link for their default preference
 - Shows visual cup + text summary
 - Useful when visiting a shop without TapCup
+
+### 2.7 Layer Composition UX
+- Improve the coffee layer-composition editor UI so it is easier to understand at a glance
+- Make drag handles, layer depth, and active selection states more obvious on mobile
+- Add clearer visual feedback while adjusting foam, milk, water, and coffee proportions
+- Reduce friction when fine-tuning the cup composition for a saved preference
 
 ---
 
@@ -123,7 +129,7 @@
 
 ### 4.2 Shop Management Polish
 - Shop list with status (active / inactive)
-- Inline staff credential reset
+- Inline shop credential reset
 - Audit log viewer
 
 ---
