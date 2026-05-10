@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -6,20 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ImageGallery from "./ImageGallery";
-
-// ── Cup visual constants ──────────────────────────────────────────────
-const CUP_H = 220;
-const CUP_TOP_W = 140;
-const CUP_BOT_W = 86;
-const CX = 100;
-
-const LAYER_DEF = [
-  { key: "foam",   label: "Foam",   color: "#f0ede8", dark: "#9e9086" },
-  { key: "milk",   label: "Milk",   color: "#f5e6c8", dark: "#c49a3a" },
-  { key: "water",  label: "Water",  color: "#a8d5f5", dark: "#4a90c4" },
-  { key: "coffee", label: "Coffee", color: "#6b3a1f", dark: "#3d1f08" },
-];
-const ORDER = ["coffee", "water", "milk", "foam"];
+import LayerComposer from "./LayerComposer";
 
 const ESPRESSO_DOSES = [
   { value: "1", label: "Single", desc: "1 × 36ml", emoji: "☕", coffeePct: 30 },
@@ -82,23 +69,6 @@ const SIZES = [
   { value: "large", label: "Large", totalMl: 300, cupH: 220 },
 ];
 
-function pctToY(pct) { return CUP_H - (pct / 100) * CUP_H; }
-function yToPct(y)   { return ((CUP_H - Math.max(0, Math.min(CUP_H, y))) / CUP_H) * 100; }
-
-function xAtY(y) {
-  const t = 1 - y / CUP_H;
-  return CUP_BOT_W / 2 + (CUP_TOP_W / 2 - CUP_BOT_W / 2) * t;
-}
-
-function layerPoints(startPct, pct) {
-  if (pct <= 0) return null;
-  const yB = pctToY(startPct);
-  const yT = pctToY(startPct + pct);
-  const xBhalf = xAtY(yB);
-  const xThalf = xAtY(yT);
-  return `${CX - xBhalf},${yB} ${CX + xBhalf},${yB} ${CX + xThalf},${yT} ${CX - xThalf},${yT}`;
-}
-
 function defaultLayers(editing) {
   return {
     water:  editing?.water_pct  ?? 0,
@@ -106,229 +76,6 @@ function defaultLayers(editing) {
     coffee: editing?.coffee_pct ?? 60,
     foam:   editing?.foam_pct   ?? 20,
   };
-}
-
-// ── CupVisual sub-component ───────────────────────────────────────────
-function CupVisual({ layers, setLayers, temp, vessel = "mug", size = "large" }) {
-  const svgRef  = useRef(null);
-  const dragging = useRef(null);
-
-  const vesselDef = VESSELS.find(v => v.value === vessel) || VESSELS[0];
-  const sizeDef   = SIZES.find(s => s.value === size) || SIZES[1];
-  const TOP_W = vesselDef.topW;
-  const BOT_W = vesselDef.botW;
-  const cupH  = sizeDef.cupH;   // visual height of cup SVG
-  const fillH = cupH;            // liquid fills full cup height
-
-  function xAtYDynamic(y) {
-    const t = 1 - y / cupH;
-    return BOT_W / 2 + (TOP_W / 2 - BOT_W / 2) * t;
-  }
-
-  function layerPointsDynamic(startPct, pct) {
-    if (pct <= 0) return null;
-    const yB = cupH - (startPct / 100) * fillH;
-    const yT = cupH - ((startPct + pct) / 100) * fillH;
-    const xBhalf = xAtYDynamic(yB);
-    const xThalf = xAtYDynamic(yT);
-    return `${CX - xBhalf},${yB} ${CX + xBhalf},${yB} ${CX + xThalf},${yT} ${CX - xThalf},${yT}`;
-  }
-
-  const stacked = (() => {
-    let cum = 0;
-    return ORDER.map(key => {
-      const startPct = cum;
-      cum += layers[key];
-      return { key, pct: layers[key], startPct };
-    });
-  })();
-
-  const dividers = stacked.slice(0, -1).map(({ key, startPct, pct }) => {
-    const cum = startPct + pct;
-    if (cum <= 0 || cum >= 100) return null;
-    const y   = cupH - (cum / 100) * fillH;
-    const xH  = xAtYDynamic(y);
-    return { key, y, x1: CX - xH, x2: CX + xH, cumPct: cum };
-  }).filter(Boolean);
-
-  const onDividerDown = useCallback((e, key) => {
-    e.preventDefault();
-    dragging.current = key;
-  }, []);
-
-  const onMove = useCallback((e) => {
-    if (!dragging.current || !svgRef.current) return;
-    const rect     = svgRef.current.getBoundingClientRect();
-    const clientY  = e.touches ? e.touches[0].clientY : e.clientY;
-    const svgY     = clientY - rect.top;
-    const newCum   = Math.round(((cupH - svgY) / fillH) * 100);
-    const key      = dragging.current;
-    const idx      = ORDER.indexOf(key);
-    const nextKey  = ORDER[idx + 1];
-    if (!nextKey) return;
-
-    // Coffee amount is locked — skip dividers that would affect it
-    if (key === "coffee") return;
-
-    setLayers(prev => {
-      let cumBelow = 0;
-      for (let i = 0; i <= idx; i++) cumBelow += prev[ORDER[i]];
-      const delta      = newCum - cumBelow;
-      const newCurrent = Math.max(0, prev[key]   + delta);
-      const newNext    = Math.max(0, prev[nextKey] - delta);
-      if (newCurrent + newNext > prev[key] + prev[nextKey] + 0.5) return prev;
-      return { ...prev, [key]: Math.round(newCurrent), [nextKey]: Math.round(newNext) };
-    });
-  }, [setLayers, fillH, cupH]);
-
-  const onUp = useCallback(() => { dragging.current = null; }, []);
-
-  useEffect(() => {
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup",   onUp);
-    window.addEventListener("touchmove", onMove, { passive: false });
-    window.addEventListener("touchend",  onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup",   onUp);
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend",  onUp);
-    };
-  }, [onMove, onUp]);
-
-  const cupPoly = `${CX - TOP_W/2},0 ${CX + TOP_W/2},0 ${CX + BOT_W/2},${cupH} ${CX - BOT_W/2},${cupH}`;
-
-  return (
-    <div className="flex flex-col items-center">
-      <p className="text-[11px] text-muted-foreground mb-2 uppercase tracking-wider font-semibold">
-        Drag lines to adjust amounts
-      </p>
-      <svg ref={svgRef} width={200} height={cupH + 16} style={{ touchAction: "none", display: "block" }}>
-        <defs>
-          <clipPath id="cup-clip">
-            <polygon points={cupPoly} />
-          </clipPath>
-        </defs>
-
-        {/* Filled layers */}
-        <g clipPath="url(#cup-clip)">
-          {stacked.map(({ key, pct, startPct }) => {
-            const ld    = LAYER_DEF.find(l => l.key === key);
-            const pts   = layerPointsDynamic(startPct, pct);
-            if (!pts) return null;
-            return <polygon key={key} points={pts} fill={ld.color} />;
-          })}
-          {/* Shine */}
-          <polygon
-            points={`${CX - TOP_W/2 + 5},0 ${CX - TOP_W/2 + 22},0 ${CX - BOT_W/2 + 14},${cupH} ${CX - BOT_W/2 + 5},${cupH}`}
-            fill="white" opacity="0.08" style={{ pointerEvents: "none" }}
-          />
-        </g>
-
-        {/* Cup outline */}
-        <polygon points={cupPoly} fill="none" stroke="hsl(var(--border))" strokeWidth="2.5" strokeLinejoin="round" />
-
-        {/* Draggable dividers */}
-        {dividers.map(({ key, y, x1, x2 }) => {
-          const ld = LAYER_DEF.find(l => l.key === key);
-          const midX = (x1 + x2) / 2;
-          return (
-            <g key={key}>
-              {/* Large invisible touch/click area */}
-              <line x1={x1 - 10} y1={y} x2={x2 + 10} y2={y}
-                stroke="transparent" strokeWidth={32} style={{ cursor: "ns-resize" }}
-                onMouseDown={e => onDividerDown(e, key)}
-                onTouchStart={e => onDividerDown(e, key)} />
-              {/* Solid divider line */}
-              <line x1={x1} y1={y} x2={x2} y2={y}
-                stroke="white" strokeWidth={2.5} strokeOpacity={0.85}
-                style={{ pointerEvents: "none" }} />
-              {/* Center drag pill */}
-              <rect
-                x={midX - 18} y={y - 9}
-                width={36} height={18} rx={9}
-                fill={ld.dark} style={{ pointerEvents: "none" }} />
-              <text x={midX} y={y + 4.5}
-                textAnchor="middle" fontSize={10} fill="white" fontWeight="700"
-                style={{ pointerEvents: "none", userSelect: "none" }}>
-                ⇅
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Layer labels */}
-        {stacked.map(({ key, pct, startPct }) => {
-          if (pct < 9) return null;
-          const ld  = LAYER_DEF.find(l => l.key === key);
-          const midY = cupH - ((startPct + pct / 2) / 100) * fillH;
-          return (
-            <text key={key} x={CX} y={midY + 4}
-              textAnchor="middle" fontSize={10} fontWeight="600" fill={ld.dark}
-              style={{ pointerEvents: "none", userSelect: "none" }}>
-              {ld.label} {pct}%
-            </text>
-          );
-        })}
-
-        {/* Steam */}
-        {(temp === "Hot" || temp === "Extra Hot") && [88, 100, 112].map((x, i) => (
-          <motion.path key={i}
-            d={`M${x} -2 Q${x + 5} -10 ${x} -20`}
-            stroke="#94a3b8" strokeWidth="1.5" fill="none" strokeLinecap="round"
-            animate={{ opacity: [0.2, 0.7, 0.2], y: [-1, -6, -1] }}
-            transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }} />
-        ))}
-      </svg>
-
-      {/* Layer controls */}
-      <div className="w-full mt-3 space-y-1.5">
-        {LAYER_DEF.map(ld => {
-          const pct = layers[ld.key];
-          function adjust(delta) {
-            setLayers(prev => {
-              const idx = ORDER.indexOf(ld.key);
-              // Find a neighbour to steal from / give to
-              const candidates = ORDER.filter((k, i) => i !== idx);
-              // Prefer taking from the last layer with surplus
-              let donor = null;
-              if (delta > 0) {
-                // We want to increase ld.key → take from the last candidate that has > 0
-                for (let i = candidates.length - 1; i >= 0; i--) {
-                  if (prev[candidates[i]] >= delta) { donor = candidates[i]; break; }
-                }
-              } else {
-                // We want to decrease ld.key → give to the next layer
-                if (prev[ld.key] + delta < 0) return prev;
-                donor = candidates[candidates.length - 1];
-              }
-              if (!donor) return prev;
-              const newVal = Math.max(0, prev[ld.key] + delta);
-              const realDelta = newVal - prev[ld.key];
-              return { ...prev, [ld.key]: newVal, [donor]: Math.max(0, prev[donor] - realDelta) };
-            });
-          }
-          return (
-            <div key={ld.key} className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                style={{ background: ld.color, border: `1.5px solid ${ld.dark}` }} />
-              <span className="text-[11px] text-muted-foreground w-10 font-medium">{ld.label}</span>
-              <div className="flex items-center gap-1 flex-1">
-                <button type="button" onClick={() => adjust(-5)} disabled={ld.key === "coffee"}
-                  className="w-6 h-6 rounded-full border border-border bg-card text-muted-foreground hover:bg-muted text-xs font-bold leading-none flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">−</button>
-                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: ld.dark }} />
-                </div>
-                <button type="button" onClick={() => adjust(5)} disabled={ld.key === "coffee"}
-                  className="w-6 h-6 rounded-full border border-border bg-card text-muted-foreground hover:bg-muted text-xs font-bold leading-none flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">+</button>
-                <span className="text-[11px] font-mono text-muted-foreground w-7 text-right">{pct}%</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 // ── Main PreferenceForm ───────────────────────────────────────────────
@@ -512,7 +259,15 @@ export default function PreferenceForm({ profile, editing, onClose, onSaved }) {
 
           {/* ── Visual cup editor ── */}
           <div className="bg-muted/30 rounded-2xl p-4">
-            <CupVisual layers={layers} setLayers={setLayers} temp={form.temperature} vessel={form.vessel} size={form.size} />
+            <LayerComposer
+              layers={layers}
+              onChange={setLayers}
+              vessel={form.vessel}
+              size={form.size}
+              temp={form.temperature}
+              milk={form.milk}
+              onMilkChange={(v) => setForm(f => ({ ...f, milk: v }))}
+            />
           </div>
 
           {/* ── Name & type ── */}
