@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Edit2, Star, Copy, Trash2 } from "lucide-react";
+import { Edit2, Star, Copy, Trash2, GripVertical } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -23,6 +23,7 @@ export default function SwipeablePreferenceCard({
   const [showOverlay, setShowOverlay]             = useState(false);
   const longPressTimer                            = useRef(null);
   const dragStartX                                = useRef(null);
+  const dragStartY                                = useRef(null);
   const wasDragged                                = useRef(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -53,6 +54,7 @@ export default function SwipeablePreferenceCard({
   function handlePointerDown(e) {
     if (e.button && e.button !== 0) return;
     dragStartX.current = e.clientX ?? e.touches?.[0]?.clientX;
+    dragStartY.current = e.clientY ?? e.touches?.[0]?.clientY;
     wasDragged.current = false;
     longPressTimer.current = setTimeout(() => {
       setShowOverlay(true);
@@ -63,7 +65,10 @@ export default function SwipeablePreferenceCard({
   function handlePointerMove(e) {
     if (longPressTimer.current === null) return;
     const x = e.clientX ?? e.touches?.[0]?.clientX;
-    if (x !== undefined && Math.abs(x - dragStartX.current) > CANCEL_MOVEMENT) {
+    const y = e.clientY ?? e.touches?.[0]?.clientY;
+    const movedX = x !== undefined && Math.abs(x - dragStartX.current) > CANCEL_MOVEMENT;
+    const movedY = y !== undefined && Math.abs(y - dragStartY.current) > CANCEL_MOVEMENT;
+    if (movedX || movedY) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
       wasDragged.current = true;
@@ -119,19 +124,17 @@ export default function SwipeablePreferenceCard({
         <div
           {...attributes}
           {...listeners}
-          className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center z-10 cursor-grab active:cursor-grabbing"
+          aria-label="Drag to reorder"
+          className="absolute left-0 top-0 bottom-0 w-9 flex items-center justify-center z-10 cursor-grab active:cursor-grabbing rounded-l-2xl bg-muted/40 hover:bg-muted/60"
           style={{ touchAction: "none" }}
         >
-          <div className="flex flex-col gap-[3px]">
-            <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
-            <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
-            <div className="w-4 h-0.5 bg-muted-foreground/40 rounded" />
-          </div>
+          <GripVertical className="w-4 h-4 text-muted-foreground/70" />
         </div>
 
         {/* Swipeable card body — no dnd-kit listeners here */}
         <motion.div
           drag="x"
+          dragSnapToOrigin
           dragConstraints={{ left: -90, right: 90 }}
           dragElastic={0.1}
           onDragEnd={handleDragEnd}
@@ -139,7 +142,7 @@ export default function SwipeablePreferenceCard({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onClick={handleTap}
-          className="pl-8"
+          className="pl-9"
           style={{ cursor: "pointer", userSelect: "none", touchAction: "pan-y" }}
         >
           <PreferenceCard
