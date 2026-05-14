@@ -1,18 +1,19 @@
-import CupDragEditor from "../CupDragEditor";
+import LayerComposer from "../LayerComposer";
 
-export default function StepLayerEditor({ form, layers, setLayers }) {
+export default function StepLayerEditor({ form, setForm, layers, setLayers }) {
   return (
-    <div className="flex flex-col items-center py-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 self-start">
+    <div className="py-2">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
         Layer composition
       </p>
-      <CupDragEditor
+      <LayerComposer
         layers={layers}
-        setLayers={setLayers}
+        onChange={setLayers}
         vessel={form.vessel}
         size={form.size}
         temp={form.temperature}
-        clipId="cup-stepper-drag"
+        milk={form.milk}
+        onMilkChange={(v) => setForm(f => ({ ...f, milk: v }))}
       />
     </div>
   );

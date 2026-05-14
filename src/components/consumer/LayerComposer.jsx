@@ -1,17 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import CoffeeCupSvg from "./CoffeeCupSvg";
 import { LAYER_DEFS, LAYER_ORDER, MILK_TYPES } from "./cup-constants";
 
-const MIN_DRAG = 5; // minimum % when dragging handles
+const MIN_DRAG = 5;
 
-// Scale all layers so they sum exactly to 100
 function normalize(raw) {
   const vals = LAYER_ORDER.map(k => Math.max(0, raw[k] || 0));
   const total = vals.reduce((s, v) => s + v, 0);
   if (total === 0) return { coffee: 50, water: 0, milk: 30, foam: 20 };
   let result = {};
   LAYER_ORDER.forEach((k, i) => { result[k] = Math.round(vals[i] * 100 / total); });
-  // Fix integer rounding drift
   const diff = 100 - LAYER_ORDER.reduce((s, k) => s + result[k], 0);
   if (diff !== 0) {
     const anchor = LAYER_ORDER.reduce((a, b) => result[a] >= result[b] ? a : b);
@@ -29,19 +27,16 @@ export default function LayerComposer({
   milk = "None",
   onMilkChange,
 }) {
-  const [selected, setSelected] = useState(null);
   const stripRef = useRef(null);
   const drag = useRef(null);
   const layersRef = useRef(layers);
   useEffect(() => { layersRef.current = layers; });
 
-  // Normalize on mount if existing data doesn't sum to 100
   useEffect(() => {
     const total = LAYER_ORDER.reduce((s, k) => s + (layers[k] || 0), 0);
     if (Math.abs(total - 100) > 1) onChange(normalize(layers));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Build cumulative left positions for rendering
   const segments = LAYER_ORDER.reduce((acc, key, i) => {
     const left = i === 0 ? 0 : acc[i - 1].right;
     const pct = Math.max(0, layers[key] || 0);
@@ -49,7 +44,6 @@ export default function LayerComposer({
     return acc;
   }, []);
 
-  // ── Drag handle logic (pointer capture, no SVG) ──────────────────────
   const onHandlePointerDown = useCallback((e, i) => {
     e.preventDefault();
     e.stopPropagation();
@@ -70,9 +64,7 @@ export default function LayerComposer({
     const combined = startLeft + startRight;
     const newLeft = Math.max(MIN_DRAG, Math.min(combined - MIN_DRAG, Math.round(startLeft + deltaPct)));
     const newRight = combined - newLeft;
-    const leftKey = LAYER_ORDER[index];
-    const rightKey = LAYER_ORDER[index + 1];
-    onChange({ ...layersRef.current, [leftKey]: newLeft, [rightKey]: newRight });
+    onChange({ ...layersRef.current, [LAYER_ORDER[index]]: newLeft, [LAYER_ORDER[index + 1]]: newRight });
   }, [onChange]);
 
   const onHandlePointerUp = useCallback(() => {
@@ -81,12 +73,10 @@ export default function LayerComposer({
     onChange(normalize(layersRef.current));
   }, [onChange]);
 
-  // ── Fine-tune +/- ────────────────────────────────────────────────────
   function adjust(key, delta) {
     const cur = layersRef.current;
     const next = { ...cur };
     if (delta > 0) {
-      // Steal from the largest available layer
       const donor = LAYER_ORDER
         .filter(k => k !== key)
         .reduce((a, b) => next[a] > next[b] ? a : b);
@@ -105,12 +95,10 @@ export default function LayerComposer({
     onChange(normalize(next));
   }
 
-  const selDef = LAYER_DEFS.find(l => l.key === selected);
-
   return (
     <div className="space-y-4">
 
-      {/* ── Live cup preview ─────────────────────────────────────────── */}
+      {/* Live cup preview */}
       <div className="flex justify-center pt-1">
         <CoffeeCupSvg
           layers={layers}
@@ -123,10 +111,10 @@ export default function LayerComposer({
         />
       </div>
 
-      {/* ── Horizontal layer strip ───────────────────────────────────── */}
+      {/* Horizontal drag strip */}
       <div>
         <p className="text-[11px] text-muted-foreground mb-2 text-center uppercase tracking-wider font-semibold">
-          Drag to adjust · tap to select
+          Drag to adjust
         </p>
 
         <div
@@ -134,21 +122,13 @@ export default function LayerComposer({
           className="relative h-14 rounded-2xl overflow-hidden select-none"
           style={{ touchAction: "none" }}
         >
-          {/* Segments */}
           {segments.map(({ key, pct, left }) => {
             const def = LAYER_DEFS.find(l => l.key === key);
-            const isSel = selected === key;
             return (
               <div
                 key={key}
-                className="absolute top-0 h-full flex items-center justify-center cursor-pointer transition-[box-shadow] duration-150"
-                style={{
-                  left: `${left}%`,
-                  width: `${pct}%`,
-                  background: def.color,
-                  boxShadow: isSel ? "inset 0 0 0 2.5px rgba(255,255,255,0.85)" : undefined,
-                }}
-                onClick={() => setSelected(k => k === key ? null : key)}
+                className="absolute top-0 h-full flex items-center justify-center"
+                style={{ left: `${left}%`, width: `${pct}%`, background: def.color }}
               >
                 {pct >= 13 && (
                   <div className="text-center pointer-events-none leading-none">
@@ -160,7 +140,6 @@ export default function LayerComposer({
             );
           })}
 
-          {/* Drag handles — one between each adjacent pair that are both > 0 */}
           {LAYER_ORDER.slice(0, -1).map((_, i) => {
             const boundary = segments[i].right;
             if (segments[i].pct === 0 || segments[i + 1].pct === 0) return null;
@@ -182,99 +161,77 @@ export default function LayerComposer({
             );
           })}
         </div>
-
-        {/* Percentage summary below strip */}
-        <div className="flex mt-1.5">
-          {segments.map(({ key, pct, left }) => {
-            const def = LAYER_DEFS.find(l => l.key === key);
-            return (
-              <div
-                key={key}
-                className="flex-shrink-0 flex justify-center"
-                style={{ width: `${pct}%`, minWidth: pct > 0 ? 0 : undefined }}
-              >
-                {pct >= 10 && (
-                  <span className="text-[9px] font-mono" style={{ color: def.dark }}>
-                    {pct}%
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
       </div>
 
-      {/* ── Selected layer control panel ─────────────────────────────── */}
-      {selected && selDef && (
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          {/* Header: layer name + fine-tune */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ background: selDef.color, border: `1.5px solid ${selDef.dark}` }}
-              />
-              <span className="text-sm font-semibold">{selDef.label}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => adjust(selected, -5)}
-                className="w-8 h-8 rounded-full border border-border bg-muted hover:bg-border text-sm font-bold flex items-center justify-center transition-colors"
-              >
-                −
-              </button>
-              <span className="text-sm font-mono w-9 text-center font-semibold tabular-nums">
-                {layers[selected] ?? 0}%
-              </span>
-              <button
-                type="button"
-                onClick={() => adjust(selected, 5)}
-                className="w-8 h-8 rounded-full border border-border bg-muted hover:bg-border text-sm font-bold flex items-center justify-center transition-colors"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Milk type selector */}
-          {selected === "milk" && (
-            <div className="flex flex-wrap gap-1.5">
-              {MILK_TYPES.map(type => (
+      {/* Always-visible per-layer controls */}
+      <div className="space-y-2">
+        {LAYER_DEFS.map(def => {
+          const pct = layers[def.key] || 0;
+          const canDecrement = pct > 0;
+          const canIncrement = LAYER_ORDER.filter(k => k !== def.key).some(k => (layers[k] || 0) > 0);
+          return (
+            <div key={def.key}>
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ background: def.color, border: `1.5px solid ${def.dark}` }}
+                />
+                <span className="text-xs font-medium w-11 flex-shrink-0">{def.label}</span>
                 <button
-                  key={type}
                   type="button"
-                  onClick={() => {
-                    onMilkChange?.(type);
-                    if (type === "None") {
-                      onChange(normalize({ ...layersRef.current, milk: 0 }));
-                    } else if ((layersRef.current.milk || 0) === 0) {
-                      const cur = layersRef.current;
-                      const donor = ["coffee", "water", "foam"]
-                        .reduce((a, b) => (cur[a] || 0) >= (cur[b] || 0) ? a : b);
-                      const take = Math.min(20, Math.max(0, cur[donor] || 0));
-                      if (take > 0) onChange(normalize({ ...cur, milk: take, [donor]: cur[donor] - take }));
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-                    milk === type
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card border-border text-muted-foreground hover:border-primary/50"
-                  }`}
+                  onClick={() => adjust(def.key, -5)}
+                  disabled={!canDecrement}
+                  className="w-7 h-7 rounded-full border border-border bg-muted hover:bg-border text-sm font-bold flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
                 >
-                  {type}
+                  −
                 </button>
-              ))}
-            </div>
-          )}
+                <span className="text-xs font-mono w-8 text-center tabular-nums flex-shrink-0">
+                  {pct}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => adjust(def.key, 5)}
+                  disabled={!canIncrement}
+                  className="w-7 h-7 rounded-full border border-border bg-muted hover:bg-border text-sm font-bold flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  +
+                </button>
+                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-150"
+                    style={{ width: `${pct}%`, background: def.dark }}
+                  />
+                </div>
+              </div>
 
-          {/* Dismiss hint */}
-          <p className="text-[10px] text-muted-foreground/60 text-center">
-            Tap the segment again to dismiss
-          </p>
-        </div>
-      )}
+              {/* Milk type pills — auto-shown when milk > 0 */}
+              {def.key === "milk" && pct > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5 pl-[84px]">
+                  {MILK_TYPES.map(type => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        onMilkChange?.(type);
+                        if (type === "None") {
+                          onChange(normalize({ ...layersRef.current, milk: 0 }));
+                        }
+                      }}
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all border ${
+                        milk === type
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card border-border text-muted-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

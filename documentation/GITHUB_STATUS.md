@@ -2,8 +2,19 @@
 
 | Branch / Area | Local | Remote |
 |---|---|---|
-| `main` | `72ff7d3` | `origin/main` at `d290dac` |
-| `feat/preference-ux` | `dfdf6f2` | Not pushed |
-| `feat/keychain-sales-page` | `dfdf6f2` | No matching remote branch |
-| Current branch delta vs `main` | `a49d2de`, `8b329f9`, `c1c627e`, `e3a1e78`, `a8e7314`, `dfdf6f2` | Not in `origin/main` |
-| Working tree | Dirty — 27 local file changes | Not pushed |
+| `main` | `8d262ff` | `origin/main` at `299fd35` |
+| Branch divergence | Local is behind by 2 commits, ahead by 0 | `origin/main` is ahead of local `main` |
+| Local branches | `main` only | No feature branches currently checked out locally |
+| Remote branches | `origin/main` only | `origin/HEAD -> origin/main` |
+| Working tree | Dirty — 4 modified tracked files, 2 untracked paths | Not pushed |
+
+## Working tree details
+
+- Modified:
+  - `src/components/consumer/CoffeeCupSvg.jsx`
+  - `src/components/consumer/LayerComposer.jsx`
+  - `src/components/consumer/steps/StepLayerEditor.jsx`
+  - `src/components/shared/NfcScanOverlay.jsx`
+- Untracked:
+  - `public/ready-scan-cup.png`
+  - `src/components/shared/ReadyToScanCup.jsx`
