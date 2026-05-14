@@ -347,7 +347,7 @@ test.describe('TapCup simulator', () => {
 
       await step('Resolve customer from redirected route', 'The redirected shop route should open the customer profile automatically', async () => {
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
-        await expect(page.getByText(SIMULATOR_PRIMARY_PREFERENCE.name)).toBeVisible();
+        await expect(page.getByTestId('shop-selected-preference-name')).toHaveText(SIMULATOR_PRIMARY_PREFERENCE.name);
         return `Opened shop customer profile for ${SIMULATOR_PRIMARY_PROFILE.display_name}`;
       });
     });
@@ -366,6 +366,7 @@ test.describe('TapCup simulator', () => {
         await page.getByRole('button', { name: /Search by Phone/i }).click();
         await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
         await expect(page.getByTestId('shop-customer-nfc-id')).toHaveText(SIMULATOR_PRIMARY_PROFILE.nfc_id);
+        await expect(page.getByTestId('shop-selected-preference-name')).toHaveText(SIMULATOR_PRIMARY_PREFERENCE.name);
         return `Opened shop profile for ${SIMULATOR_PRIMARY_PROFILE.display_name} by phone`;
       });
     });
@@ -400,7 +401,6 @@ test.describe('TapCup simulator', () => {
 
   test('shop: log order from the customer profile', async ({ page }, testInfo) => {
     await seedVisibilityController(page);
-    await seedSavedPersonalId(page, SIMULATOR_PRIMARY_PROFILE.nfc_id);
 
     await runScenario(testInfo, page, 'shop log order from customer profile', async ({ step }) => {
       await step('Open shop page', 'Shop scan view should render', async () => {
@@ -409,22 +409,97 @@ test.describe('TapCup simulator', () => {
         return 'Shop scan view loaded';
       });
 
-      await step('Open customer profile', 'The seeded chip should open the customer profile', async () => {
-        await page.getByTestId('shop-tap-nfc').click();
-        await page.waitForTimeout(NFC_SCAN_DELAY_MS + 500);
-        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
-        await expect(page.getByText(SIMULATOR_PRIMARY_PREFERENCE.name)).toBeVisible();
-        return `Opened shop profile for ${SIMULATOR_PRIMARY_PROFILE.display_name}`;
+      await step('Open customer profile', 'Manual phone lookup should load the multi-preference customer', async () => {
+        await page.getByPlaceholder('+1 555 000 0000').fill(PROFILE_ALEX.phone);
+        await page.getByRole('button', { name: /Search by Phone/i }).click();
+        await expect(page.getByTestId('shop-customer-display-name')).toHaveText(PROFILE_ALEX.display_name);
+        await expect(page.getByTestId('shop-selected-preference-name')).toHaveText(PREF_ALEX_FLAT_WHITE.name);
+        return `Opened shop profile for ${PROFILE_ALEX.display_name}`;
       });
 
-      await step('Log order', 'The shop should be able to add a completed order for the customer', async () => {
-        await page.getByRole('button', { name: /^Order$/ }).click();
-        await expect(page.getByRole('heading', { name: /Add Order/i })).toBeVisible();
-        await page.getByPlaceholder('e.g. Extra shot added').fill('Extra hot, oat milk');
-        await page.getByRole('button', { name: /Log Order/i }).click();
-        await page.getByRole('button', { name: /History/i }).click();
+      await step('Switch drink', 'The barista should be able to switch from the default drink for this order only', async () => {
+        await page.getByTestId(`shop-preference-option-${PREF_ALEX_ICED_AMERICANO.id}`).click();
+        await expect(page.getByTestId('shop-selected-preference-name')).toHaveText(PREF_ALEX_ICED_AMERICANO.name);
+        await expect(page.getByTestId('shop-selected-preference-notes')).toHaveText(/No customer notes/i);
+        return `Switched active order preference to ${PREF_ALEX_ICED_AMERICANO.name}`;
+      });
+
+      await step('Log order inline', 'The selected preference and note should be reflected in the recent orders summary', async () => {
+        await page.getByTestId('shop-barista-notes').fill('Extra hot, oat milk');
+        await page.getByTestId('shop-log-order').click();
+        await expect(page.getByTestId('shop-post-order-dialog')).toBeVisible();
+        await expect(page.getByTestId('shop-post-order-dialog')).toContainText(`Logged ${PREF_ALEX_ICED_AMERICANO.name}.`);
+        await expect(page.getByTestId('shop-post-order-back')).toHaveText('Back to Shop Page');
         await expect(page.getByText('Extra hot, oat milk')).toBeVisible();
-        return 'Logged an order and verified it in order history';
+        await expect(page.getByTestId('shop-recent-orders').locator('[data-testid^="shop-recent-order-"]').first()).toContainText(PREF_ALEX_ICED_AMERICANO.name);
+        return 'Logged an order inline and verified the post-order choice dialog';
+      });
+
+      await step('Return to shop page', 'The shop action should return to the lookup state with chip tools visible', async () => {
+        await page.getByTestId('shop-post-order-back').click();
+        await expect(page.getByTestId('shop-tap-nfc')).toBeVisible();
+        await expect(page.getByTestId('shop-chip-mgmt-personal-id')).toBeVisible();
+        return 'Returned to the shop lookup state after logging an order';
+      });
+    });
+  });
+
+  test('shop: first saved preference is selected when no default exists', async ({ page }, testInfo) => {
+    await page.addInitScript(({ storageKey, preferences }) => {
+      const raw = window.localStorage.getItem(storageKey);
+      const state = raw ? JSON.parse(raw) : {};
+      state.CoffeePreference = preferences;
+      window.localStorage.setItem(storageKey, JSON.stringify(state));
+    }, {
+      storageKey: 'tapcup_simulator_db_v1',
+      preferences: [
+        SIMULATOR_PRIMARY_PREFERENCE,
+        { ...PREF_ALEX_FLAT_WHITE, is_default: false },
+        { ...PREF_ALEX_ICED_AMERICANO, is_default: false },
+      ],
+    });
+
+    await runScenario(testInfo, page, 'shop falls back to first saved preference when no default exists', async ({ step }) => {
+      await step('Open routed shop profile', 'The personal_id route should still resolve the customer', async () => {
+        await page.goto(`/shop?personal_id=${PROFILE_ALEX.nfc_id}`);
+        await expect(page.getByTestId('shop-customer-display-name')).toHaveText(PROFILE_ALEX.display_name);
+        return `Opened ${PROFILE_ALEX.display_name} through routed shop lookup`;
+      });
+
+      await step('Check fallback preference', 'The first saved preference should become the active cup when no default exists', async () => {
+        await expect(page.getByTestId('shop-selected-preference-name')).toHaveText(PREF_ALEX_FLAT_WHITE.name);
+        await expect(page.getByTestId(`shop-preference-option-${PREF_ALEX_FLAT_WHITE.id}`)).toContainText('Active');
+        return `Selected fallback preference ${PREF_ALEX_FLAT_WHITE.name}`;
+      });
+    });
+  });
+
+  test('shop: customer with no preferences shows the empty serving state', async ({ page }, testInfo) => {
+    await page.addInitScript(({ storageKey, preferences }) => {
+      const raw = window.localStorage.getItem(storageKey);
+      const state = raw ? JSON.parse(raw) : {};
+      state.CoffeePreference = preferences;
+      window.localStorage.setItem(storageKey, JSON.stringify(state));
+    }, {
+      storageKey: 'tapcup_simulator_db_v1',
+      preferences: [
+        PREF_ALEX_FLAT_WHITE,
+        PREF_ALEX_ICED_AMERICANO,
+      ],
+    });
+
+    await runScenario(testInfo, page, 'shop customer with no preferences shows empty serving state', async ({ step }) => {
+      await step('Open routed shop profile', 'The customer should still resolve from the personal_id route', async () => {
+        await page.goto(`/shop?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await expect(page.getByTestId('shop-customer-display-name')).toHaveText(SIMULATOR_PRIMARY_PROFILE.display_name);
+        return `Opened ${SIMULATOR_PRIMARY_PROFILE.display_name} without saved preferences`;
+      });
+
+      await step('Check empty preference state', 'The serving screen should explain that no preferences are on file', async () => {
+        await expect(page.getByTestId('shop-no-preferences-state')).toContainText('No saved preferences');
+        await expect(page.getByText('No saved preferences on file for this customer.')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Custom order' })).toBeVisible();
+        return 'Empty serving state rendered for a customer with no preferences';
       });
     });
   });

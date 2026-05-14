@@ -507,7 +507,7 @@ function ShopExperience({ shop, onSignOut }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="max-w-lg mx-auto px-4 pt-8 pb-24"
+            className="mx-auto max-w-6xl px-4 pt-8 pb-24"
           >
             <button
               onClick={() => { setCustomer(null); setManualInput(""); setPhoneInput(""); setError(""); }}
@@ -517,9 +517,8 @@ function ShopExperience({ shop, onSignOut }) {
             </button>
             <CustomerProfileView
               profile={customer}
-              enableChipSetup
               shopName={shop?.name || "Coffee Shop"}
-              onProfileUpdated={(updatedProfile) => setCustomer(updatedProfile)}
+              onBackToShop={() => { setCustomer(null); setManualInput(""); setPhoneInput(""); setError(""); }}
             />
           </motion.div>
         )}
