@@ -14,6 +14,7 @@ import {
 } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { base44 } from "@/api/base44Client";
+import { normalizeStrengthValue } from "./cup-constants.jsx";
 import SwipeablePreferenceCard from "./SwipeablePreferenceCard";
 
 const MAX_PREFS = 5;
@@ -44,7 +45,7 @@ export default function PreferenceList({
       user_email:  pref.user_email,
       name:        `${pref.name} (copy)`,
       coffee_type: pref.coffee_type,
-      strength:    pref.strength,
+      strength:    normalizeStrengthValue(pref.strength),
       milk:        pref.milk,
       sugar:       pref.sugar,
       temperature: pref.temperature,

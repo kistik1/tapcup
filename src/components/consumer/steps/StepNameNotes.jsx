@@ -28,16 +28,6 @@ export default function StepNameNotes({
       </div>
 
       <div>
-        <Label>Coffee Type</Label>
-        <Input
-          value={form.coffee_type}
-          onChange={e => setForm(f => ({ ...f, coffee_type: e.target.value }))}
-          placeholder="e.g. Latte, Espresso, Flat White"
-          className="mt-1 h-12 rounded-xl text-base"
-        />
-      </div>
-
-      <div>
         <Label>Special Notes</Label>
         <Input
           value={form.notes}

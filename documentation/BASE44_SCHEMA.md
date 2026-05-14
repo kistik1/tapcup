@@ -27,8 +27,8 @@ One or more records per customer. Each is a saved coffee recipe.
 | `profile_id` | Text | ✓ | Foreign key → CoffeeProfile |
 | `user_email` | Text | ✓ | Denormalized from profile for fast filtering |
 | `name` | Text | ✓ | Human label, e.g. "Morning Latte" |
-| `coffee_type` | Text | ✓ | e.g. Latte, Cappuccino, Americano, Flat White, Espresso |
-| `strength` | Text | ✓ | Espresso shots: `"1"`, `"2"`, `"3"` |
+| `coffee_type` | Text | ✓ | Preset type or custom label, e.g. Latte, Cappuccino, Americano, Flat White, Espresso |
+| `strength` | Text | ✓ | Strength level: `low`, `regular`, `high` |
 | `milk` | Text | ✓ | None / Whole / Skim / Oat / Almond / Soy / Coconut |
 | `sugar` | Text | ✓ | None / Half / 1 tsp / 2 tsp / 3 tsp |
 | `temperature` | Text | ✓ | Extra Hot / Hot / Warm / Iced |

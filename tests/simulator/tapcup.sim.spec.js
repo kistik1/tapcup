@@ -541,6 +541,58 @@ test.describe('TapCup simulator', () => {
     });
   });
 
+  test('consumer: new preference flow supports preset and custom coffee types', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'consumer new preference flow supports custom coffee types', async ({ step }) => {
+      await step('Open profile and launch add flow', 'Preference stepper should start on Coffee Type', async () => {
+        await page.goto(`/consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        await page.getByRole('button', { name: /Add Coffee Preference/i }).click();
+        await expect(page.getByText('Step 1 of 4 — Coffee Type')).toBeVisible();
+        return 'Preference stepper opened on Coffee Type';
+      });
+
+      await step('Use custom coffee type and select high strength', 'The new step flow should save a custom coffee type without espresso dose controls', async () => {
+        await page.getByRole('button', { name: 'Other' }).click();
+        await page.getByPlaceholder('Enter coffee type').fill('Cortado');
+        await page.getByRole('button', { name: /Next — Cup & Size/i }).click();
+        await expect(page.getByText('Step 2 of 4 — Cup & Size')).toBeVisible();
+        await expect(page.getByText(/Espresso dose/i)).toHaveCount(0);
+        await page.getByRole('button', { name: /Next — Details/i }).click();
+        await expect(page.getByText('Step 3 of 4 — Details')).toBeVisible();
+        await page.getByTestId('strength-option-high').click();
+        await page.getByRole('button', { name: /Next — Name & Save/i }).click();
+        await page.getByPlaceholder('e.g. Morning Latte').fill('Night Cortado');
+        await page.getByRole('button', { name: /Add Preference/i }).click();
+        await expect(page.getByText('Night Cortado')).toBeVisible();
+        await expect(page.getByText('Cortado', { exact: true })).toBeVisible();
+        await expect(page.getByText('High strength', { exact: true })).toBeVisible();
+        return 'Saved a new preference with custom coffee type Cortado and high strength';
+      });
+    });
+  });
+
+  test('consumer: editing legacy strength maps to the new strength selector', async ({ page }, testInfo) => {
+    await runScenario(testInfo, page, 'consumer editing legacy strength maps to new selector', async ({ step }) => {
+      await step('Open existing default preference for edit', 'The editor should load the legacy value into the new stepper', async () => {
+        await page.goto(`/consumer?personal_id=${SIMULATOR_PRIMARY_PROFILE.nfc_id}`);
+        await expect(page.getByText(SIMULATOR_PRIMARY_PROFILE.display_name)).toBeVisible();
+        await page.getByRole('button', { name: 'Edit', exact: true }).click();
+        await expect(page.getByText('Step 1 of 4 — Coffee Type')).toBeVisible();
+        return 'Edit preference flow opened';
+      });
+
+      await step('Navigate to Details and verify mapped strength', 'Legacy strength \"2\" should map to High in the UI', async () => {
+        await page.getByRole('button', { name: /Next — Cup & Size/i }).click();
+        await page.getByRole('button', { name: /Next — Details/i }).click();
+        await expect(page.getByTestId('strength-option-high')).toHaveAttribute('aria-pressed', 'true');
+        await page.getByRole('button', { name: /Next — Name & Save/i }).click();
+        await page.getByRole('button', { name: /Save Changes/i }).click();
+        await expect(page.getByText(/High strength/i).first()).toBeVisible();
+        return 'Legacy strength value mapped to High and saved through the new flow';
+      });
+    });
+  });
+
   test('consumer: reorder opens preference form pre-filled with snapshot', async ({ page }, testInfo) => {
     await runScenario(testInfo, page, 'consumer reorder opens preference form with snapshot', async ({ step }) => {
       await step('Open History tab and find Reorder button', 'Reorder button should appear on the order card', async () => {

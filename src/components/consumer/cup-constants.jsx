@@ -21,10 +21,21 @@ export const SIZE_DEFS = [
   { value: "large", label: "Large", totalMl: 300, cupH: 220 },
 ];
 
-export const ESPRESSO_DOSES = [
-  { value: "1", label: "Single", desc: "1 × 36ml", emoji: "☕",     coffeePct: 30 },
-  { value: "2", label: "Double", desc: "2 × 36ml", emoji: "☕☕",   coffeePct: 50 },
-  { value: "3", label: "Triple", desc: "3 × 36ml", emoji: "☕☕☕", coffeePct: 70 },
+export const COFFEE_TYPE_OPTIONS = [
+  "Espresso",
+  "Americano",
+  "Latte",
+  "Cappuccino",
+  "Flat White",
+  "Macchiato",
+];
+
+export const OTHER_COFFEE_TYPE = "__other__";
+
+export const STRENGTH_OPTIONS = [
+  { value: "low", label: "Low", doseLabel: "0.5 espresso dose" },
+  { value: "regular", label: "Regular", doseLabel: "1.0 espresso dose" },
+  { value: "high", label: "High", doseLabel: "2.0 espresso doses" },
 ];
 
 export const MILK_TYPES  = ["None", "Whole", "Skim", "Oat", "Almond", "Soy", "Coconut"];
@@ -32,6 +43,27 @@ export const SUGARS      = ["None", "Half", "1 tsp", "2 tsp", "3 tsp"];
 export const TEMPS       = ["Extra Hot", "Hot", "Warm", "Iced"];
 
 export const DEFAULT_LAYERS = { coffee: 60, water: 0, milk: 20, foam: 20 };
+
+const LEGACY_STRENGTH_MAP = {
+  "1": "regular",
+  "2": "high",
+  "3": "high",
+};
+
+export function normalizeStrengthValue(value) {
+  if (!value) return "regular";
+  return LEGACY_STRENGTH_MAP[value] || value;
+}
+
+export function formatStrengthLabel(value) {
+  const normalized = normalizeStrengthValue(value);
+  return STRENGTH_OPTIONS.find((option) => option.value === normalized)?.label || normalized;
+}
+
+export function resolveCoffeeTypeOption(value) {
+  if (!value) return "";
+  return COFFEE_TYPE_OPTIONS.includes(value) ? value : OTHER_COFFEE_TYPE;
+}
 
 export const MUG_SVG = (
   <svg viewBox="0 0 56 56" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

@@ -1,6 +1,7 @@
 import { Star, Edit2, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import CoffeeCupSvg from "./CoffeeCupSvg";
+import { formatStrengthLabel } from "./cup-constants.jsx";
 
 export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, onDelete, large }) {
   const hasLayerData = (pref.coffee_pct || 0) + (pref.water_pct || 0) + (pref.milk_pct || 0) + (pref.foam_pct || 0) > 0;
@@ -12,7 +13,7 @@ export default function PreferenceCard({ pref, isDefault, onEdit, onSetDefault, 
   };
 
   const details = [
-    pref.strength && `${pref.strength}`,
+    pref.strength && `${formatStrengthLabel(pref.strength)} strength`,
     pref.milk && pref.milk !== "None" && `${pref.milk} milk`,
     pref.sugar && pref.sugar !== "None" && `${pref.sugar} sugar`,
     pref.temperature && `${pref.temperature}`,

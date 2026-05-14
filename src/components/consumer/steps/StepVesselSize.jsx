@@ -1,44 +1,7 @@
-import { VESSEL_DEFS, VESSEL_SVGS, SIZE_DEFS, ESPRESSO_DOSES } from "../cup-constants.jsx";
+import LayerComposer from "../LayerComposer";
+import { VESSEL_DEFS, VESSEL_SVGS, SIZE_DEFS } from "../cup-constants.jsx";
 
 export default function StepVesselSize({ form, setForm, layers, setLayers }) {
-  function handleSizeChange(sizeDef) {
-    setForm(f => ({ ...f, size: sizeDef.value }));
-    const doses     = parseInt(form.strength) || 2;
-    const coffeeMl  = doses * 36;
-    const coffeePct = Math.round((coffeeMl / sizeDef.totalMl) * 100);
-    setLayers(prev => {
-      const nonCoffeeTotal = (prev.water || 0) + (prev.milk || 0) + (prev.foam || 0);
-      const remaining = 100 - coffeePct;
-      if (nonCoffeeTotal === 0) return { ...prev, coffee: coffeePct, foam: remaining };
-      const scale = remaining / nonCoffeeTotal;
-      return {
-        water:  Math.round((prev.water || 0) * scale),
-        milk:   Math.round((prev.milk  || 0) * scale),
-        coffee: coffeePct,
-        foam:   Math.round((prev.foam  || 0) * scale),
-      };
-    });
-  }
-
-  function handleDoseChange(dose) {
-    setForm(f => ({ ...f, strength: dose.value }));
-    setLayers(prev => {
-      const total         = (prev.water || 0) + (prev.milk || 0) + (prev.coffee || 0) + (prev.foam || 0);
-      const nonCoffeeTotal = (prev.water || 0) + (prev.milk || 0) + (prev.foam || 0);
-      const remaining     = total - dose.coffeePct;
-      if (nonCoffeeTotal === 0) {
-        return { ...prev, coffee: dose.coffeePct, foam: Math.max(0, total - dose.coffeePct) };
-      }
-      const scale = remaining / nonCoffeeTotal;
-      return {
-        water:  Math.round((prev.water || 0) * scale),
-        milk:   Math.round((prev.milk  || 0) * scale),
-        coffee: dose.coffeePct,
-        foam:   Math.round((prev.foam  || 0) * scale),
-      };
-    });
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -69,7 +32,8 @@ export default function StepVesselSize({ form, setForm, layers, setLayers }) {
             <button
               key={s.value}
               type="button"
-              onClick={() => handleSizeChange(s)}
+              aria-pressed={form.size === s.value}
+              onClick={() => setForm(f => ({ ...f, size: s.value }))}
               className={`flex flex-col items-center py-4 rounded-2xl border-2 transition-all text-sm font-medium ${
                 form.size === s.value
                   ? "border-primary bg-primary/10 text-primary"
@@ -84,25 +48,16 @@ export default function StepVesselSize({ form, setForm, layers, setLayers }) {
       </div>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Espresso dose</p>
-        <div className="grid grid-cols-3 gap-2">
-          {ESPRESSO_DOSES.map(d => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => handleDoseChange(d)}
-              className={`flex flex-col items-center py-3 rounded-2xl border-2 transition-all text-sm font-medium ${
-                form.strength === d.value
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-card text-muted-foreground hover:border-primary/40"
-              }`}
-            >
-              <span className="text-xl mb-0.5">{d.emoji}</span>
-              <span className="font-semibold">{d.label}</span>
-              <span className="text-[10px] font-mono opacity-70">{d.desc}</span>
-            </button>
-          ))}
-        </div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Layer composition</p>
+        <LayerComposer
+          layers={layers}
+          onChange={setLayers}
+          vessel={form.vessel}
+          size={form.size}
+          temp={form.temperature}
+          milk={form.milk}
+          onMilkChange={(value) => setForm((current) => ({ ...current, milk: value }))}
+        />
       </div>
     </div>
   );

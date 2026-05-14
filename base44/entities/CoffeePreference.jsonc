@@ -16,11 +16,11 @@
     },
     "coffee_type": {
       "type": "string",
-      "description": "e.g. Latte, Cappuccino, Americano, Flat White, Espresso"
+      "description": "Preset type or custom label, e.g. Latte, Cappuccino, Americano, Flat White, Espresso"
     },
     "strength": {
       "type": "string",
-      "description": "Espresso shots: 1, 2, or 3"
+      "description": "Strength level: low, regular, or high"
     },
     "milk": {
       "type": "string",

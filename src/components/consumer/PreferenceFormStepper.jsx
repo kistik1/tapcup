@@ -3,19 +3,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { savePreferenceDraft, loadPreferenceDraft, clearPreferenceDraft } from "@/lib/preference-draft";
-import { DEFAULT_LAYERS } from "./cup-constants.jsx";
+import { DEFAULT_LAYERS, normalizeStrengthValue, resolveCoffeeTypeOption } from "./cup-constants.jsx";
+import StepCoffeeType from "./steps/StepCoffeeType";
 import StepVesselSize  from "./steps/StepVesselSize";
-import StepLayerEditor from "./steps/StepLayerEditor";
 import StepDetails     from "./steps/StepDetails";
 import StepNameNotes   from "./steps/StepNameNotes";
 import ImageGallery from "./ImageGallery";
 
-const STEP_LABELS = ["Cup & Size", "Layers", "Details", "Name & Save"];
+const STEP_LABELS = ["Coffee Type", "Cup & Size", "Details", "Name & Save"];
 
 const DEFAULT_FORM = {
   name:        "",
   coffee_type: "",
-  strength:    "2",
+  coffee_type_mode: "",
+  strength:    "regular",
   milk:        "Oat",
   sugar:       "None",
   temperature: "Hot",
@@ -31,7 +32,8 @@ function formFromEditing(editing) {
   return {
     name:        editing.name        || "",
     coffee_type: editing.coffee_type || "",
-    strength:    editing.strength    || "2",
+    coffee_type_mode: resolveCoffeeTypeOption(editing.coffee_type || ""),
+    strength:    normalizeStrengthValue(editing.strength),
     milk:        editing.milk        || "None",
     sugar:       editing.sugar       || "None",
     temperature: editing.temperature || "Hot",
@@ -40,6 +42,16 @@ function formFromEditing(editing) {
     is_default:  editing.is_default  || false,
     vessel:      editing.vessel      || "mug",
     size:        editing.size        || "large",
+  };
+}
+
+function normalizeDraftForm(draftForm) {
+  if (!draftForm) return null;
+  return {
+    ...DEFAULT_FORM,
+    ...draftForm,
+    coffee_type_mode: draftForm.coffee_type_mode || resolveCoffeeTypeOption(draftForm.coffee_type || ""),
+    strength: normalizeStrengthValue(draftForm.strength),
   };
 }
 
@@ -58,7 +70,7 @@ export default function PreferenceFormStepper({ profile, editing, initialValues,
   const draft = (!editing && !initialValues) ? loadPreferenceDraft(profile.id, null) : null;
   const seed = editing || initialValues;
 
-  const [form, setForm]     = useState(() => draft?.form || formFromEditing(seed));
+  const [form, setForm]     = useState(() => normalizeDraftForm(draft?.form) || formFromEditing(seed));
   const [layers, setLayers] = useState(() => draft?.layers || layersFromEditing(seed));
   const [step, setStep]     = useState(0);
   const [dir, setDir]       = useState(1);  // 1 = forward, -1 = backward
@@ -78,6 +90,7 @@ export default function PreferenceFormStepper({ profile, editing, initialValues,
   }, [form, layers, editing, initialValues, profile.id]);
 
   function goNext() {
+    if (!canProceedToNextStep) return;
     setDir(1);
     setStep(s => Math.min(s + 1, STEP_LABELS.length - 1));
   }
@@ -88,10 +101,13 @@ export default function PreferenceFormStepper({ profile, editing, initialValues,
   }
 
   async function handleSave() {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || !form.coffee_type.trim()) return;
     setSaving(true);
+    const { coffee_type_mode, ...restForm } = form;
     const data = {
-      ...form,
+      ...restForm,
+      coffee_type: form.coffee_type.trim(),
+      strength:   normalizeStrengthValue(form.strength),
       milk:       layers.milk > 0 ? (form.milk === "None" ? "Whole" : form.milk) : "None",
       profile_id: profile.id,
       user_email: profile.user_email,
@@ -125,10 +141,11 @@ export default function PreferenceFormStepper({ profile, editing, initialValues,
   }
 
   const stepProps = { form, setForm, layers, setLayers };
+  const canProceedToNextStep = step !== 0 || Boolean(form.coffee_type.trim());
 
   const STEPS = [
+    <StepCoffeeType key="coffee-type" form={form} setForm={setForm} />,
     <StepVesselSize  key="vessel"  {...stepProps} />,
-    <StepLayerEditor key="layers"  {...stepProps} />,
     <StepDetails     key="details" {...stepProps} />,
     <StepNameNotes
       key="name"
@@ -217,7 +234,8 @@ export default function PreferenceFormStepper({ profile, editing, initialValues,
             <button
               type="button"
               onClick={goNext}
-              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm"
+              disabled={!canProceedToNextStep}
+              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next — {STEP_LABELS[step + 1]}
             </button>
