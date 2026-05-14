@@ -10,5 +10,5 @@
 
 ## Working tree details
 
-- Published commit on `main`: `e27002f` (`docs: finalize github status snapshot`)
+- Published branch state: local `main` matches `origin/main`
 - Local checkout status at time of update: clean
